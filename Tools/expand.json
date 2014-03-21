@@ -1,0 +1,852 @@
+{
+  "abbr": [
+    {
+        "k": "aly",
+        "v": "alley"
+    },
+    {
+        "k": "arc",
+        "v": "arcade"
+    },
+    {
+        "k": "av",
+        "v": "avenue"
+    },
+    {
+        "k": "ave",
+        "v": "avenue"
+    },
+    {
+        "k": "blf",
+        "v": "bluff"
+    },
+    {
+        "k": "bl",
+        "v": "boulevard"
+    },
+    {
+        "k": "blvd",
+        "v": "boulevard"
+    },
+    {
+        "k": "br",
+        "v": "bridge"
+    },
+    {
+        "k": "brg",
+        "v": "bridge"
+    },
+    {
+        "k": "byp",
+        "v": "bypass"
+    },
+    {
+        "k": "ci",
+        "v": "circle"
+    },
+    {
+        "k": "cir",
+        "v": "circle"
+    },
+    {
+        "k": "cres",
+        "v": "crescent"
+    },
+    {
+        "k": "crt",
+        "v": "court"
+    },
+    {
+        "k": "cswy",
+        "v": "causeway"
+    },
+    {
+        "k": "ct",
+        "v": "court"
+    },
+    {
+        "k": "ctr",
+        "v": "center"
+    },
+    {
+        "k": "cv",
+        "v": "cove"
+    },
+    {
+        "k": "dgnl",
+        "v": "diagonal"
+    },
+    {
+        "k": "dr",
+        "v": "drive"
+    },
+    {
+        "k": "expy",
+        "v": "expressway"
+    },
+    {
+        "k": "expwy",
+        "v": "expressway"
+    },
+    {
+        "k": "ewy",
+        "v": "freeway"
+    },
+    {
+        "k": "grd",
+        "v": "grade"
+    },
+    {
+        "k": "hbr",
+        "v": "harbor"
+    },
+    {
+        "k": "holw",
+        "v": "hollow"
+    },
+    {
+        "k": "hwy",
+        "v": "highway"
+    },
+    {
+        "k": "ln",
+        "v": "lane"
+    },
+    {
+        "k": "lndg",
+        "v": "landing"
+    },
+    {
+        "k": "mal",
+        "v": "mall"
+    },
+    {
+        "k": "mtwy",
+        "v": "motorway"
+    },
+    {
+        "k": "ovps",
+        "v": "overpass"
+    },
+    {
+        "k": "pk",
+        "v": "park"
+    },
+    {
+        "k": "pw",
+        "v": "parkway"
+    },
+    {
+        "k": "pky",
+        "v": "parkway"
+    },
+    {
+        "k": "pkwy",
+        "v": "parkway"
+    },
+    {
+        "k": "pl",
+        "v": "place"
+    },
+    {
+        "k": "plz",
+        "v": "plaza"
+    },
+    {
+        "k": "rd",
+        "v": "road"
+    },
+    {
+        "k": "rdg",
+        "v": "ridge"
+    },
+    {
+        "k": "rte",
+        "v": "route"
+    },
+    {
+        "k": "skwy",
+        "v": "sKyway"
+    },
+    {
+        "k": "sq",
+        "v": "square"
+    },
+    {
+        "k": "tr",
+        "v": "terrace"
+    },
+    {
+        "k": "te",
+        "v": "terrace"
+    },
+    {
+        "k": "ter",
+        "v": "terrace"
+    },
+    {
+        "k": "tfwy",
+        "v": "trafficway"
+    },
+    {
+        "k": "thfr",
+        "v": "thoroughfare"
+    },
+    {
+        "k": "thwy",
+        "v": "thruway"
+    },
+    {
+        "k": "tpke",
+        "v": "turnpiKe"
+    },
+    {
+        "k": "trce",
+        "v": "trace"
+    },
+    {
+        "k": "tunl",
+        "v": "tunnel"
+    },
+    {
+        "k": "unp",
+        "v": "underpass"
+    },
+    {
+        "k": "wKwy",
+        "v": "walKway"
+    },
+    {
+        "k": "xing",
+        "v": "crossing"
+    },
+    {
+        "k": "anx",
+        "v": "annex"
+    },
+    {
+        "k": "arc",
+        "v": "arcade"
+    },
+    {
+        "k": "byu",
+        "v": "bayoo"
+    },
+    {
+        "k": "bch",
+        "v": "beach"
+    },
+    {
+        "k": "bnd",
+        "v": "bend"
+    },
+    {
+        "k": "btm",
+        "v": "bottom"
+    },
+    {
+        "k": "br",
+        "v": "branch"
+    },
+    {
+        "k": "brk",
+        "v": "brooK"
+    },
+    {
+        "k": "brks",
+        "v": "brooKs"
+    },
+    {
+        "k": "bg",
+        "v": "burg"
+    },
+    {
+        "k": "bgs",
+        "v": "burgs"
+    },
+    {
+        "k": "cp",
+        "v": "camp"
+    },
+    {
+        "k": "cyn",
+        "v": "canyon"
+    },
+    {
+        "k": "cpe",
+        "v": "cape"
+    },
+    {
+        "k": "ctrs",
+        "v": "centers"
+    },
+    {
+        "k": "cirs",
+        "v": "circles"
+    },
+    {
+        "k": "clf",
+        "v": "cliff"
+    },
+    {
+        "k": "clfs",
+        "v": "cliffs"
+    },
+    {
+        "k": "clb",
+        "v": "club"
+    },
+    {
+        "k": "cmn",
+        "v": "common"
+    },
+    {
+        "k": "cor",
+        "v": "corner"
+    },
+    {
+        "k": "cors",
+        "v": "corners"
+    },
+    {
+        "k": "crse",
+        "v": "course"
+    },
+    {
+        "k": "cts",
+        "v": "courts"
+    },
+    {
+        "k": "cv",
+        "v": "cove"
+    },
+    {
+        "k": "cvs",
+        "v": "coves"
+    },
+    {
+        "k": "crK",
+        "v": "creeK"
+    },
+    {
+        "k": "crst",
+        "v": "crest"
+    },
+    {
+        "k": "xrd",
+        "v": "crossroad"
+    },
+    {
+        "k": "curv",
+        "v": "curve"
+    },
+    {
+        "k": "dl",
+        "v": "dale"
+    },
+    {
+        "k": "dm",
+        "v": "dam"
+    },
+    {
+        "k": "dv",
+        "v": "divide"
+    },
+    {
+        "k": "drs",
+        "v": "drives"
+    },
+    {
+        "k": "est",
+        "v": "estate"
+    },
+    {
+        "k": "ests",
+        "v": "estates"
+    },
+    {
+        "k": "ext",
+        "v": "extension"
+    },
+    {
+        "k": "exts",
+        "v": "extensions"
+    },
+    {
+        "k": "fls",
+        "v": "falls"
+    },
+    {
+        "k": "fry",
+        "v": "ferry"
+    },
+    {
+        "k": "fld",
+        "v": "field"
+    },
+    {
+        "k": "flds",
+        "v": "fields"
+    },
+    {
+        "k": "flt",
+        "v": "flat"
+    },
+    {
+        "k": "flts",
+        "v": "flats"
+    },
+    {
+        "k": "frd",
+        "v": "ford"
+    },
+    {
+        "k": "frds",
+        "v": "fords"
+    },
+    {
+        "k": "frst",
+        "v": "forest"
+    },
+    {
+        "k": "frg",
+        "v": "forge"
+    },
+    {
+        "k": "frgs",
+        "v": "forges"
+    },
+    {
+        "k": "frK",
+        "v": "forK"
+    },
+    {
+        "k": "frKs",
+        "v": "forKs"
+    },
+    {
+        "k": "ft",
+        "v": "fort"
+    },
+    {
+        "k": "gdn",
+        "v": "garden"
+    },
+    {
+        "k": "gdns",
+        "v": "gardens"
+    },
+    {
+        "k": "gtwy",
+        "v": "gateway"
+    },
+    {
+        "k": "gln",
+        "v": "glen"
+    },
+    {
+        "k": "glns",
+        "v": "glens"
+    },
+    {
+        "k": "grn",
+        "v": "green"
+    },
+    {
+        "k": "grns",
+        "v": "greens"
+    },
+    {
+        "k": "grv",
+        "v": "grove"
+    },
+    {
+        "k": "grvs",
+        "v": "groves"
+    },
+    {
+        "k": "hbrs",
+        "v": "harbours"
+    },
+    {
+        "k": "hvn",
+        "v": "haven"
+    },
+    {
+        "k": "hts",
+        "v": "heights"
+    },
+    {
+        "k": "hl",
+        "v": "hill"
+    },
+    {
+        "k": "hls",
+        "v": "hills"
+    },
+    {
+        "k": "inlt",
+        "v": "inlet"
+    },
+    {
+        "k": "is",
+        "v": "island"
+    },
+    {
+        "k": "iss",
+        "v": "islands"
+    },
+    {
+        "k": "jr",
+        "v": "junior"
+    },
+    {
+        "k": "jct",
+        "v": "junction"
+    },
+    {
+        "k": "jcts",
+        "v": "junctions"
+    },
+    {
+        "k": "Ky",
+        "v": "k"
+    },
+    {
+        "k": "Kys",
+        "v": "ks"
+    },
+    {
+        "k": "Knl",
+        "v": "Knoll"
+    },
+    {
+        "k": "Knls",
+        "v": "Knolls"
+    },
+    {
+        "k": "la",
+        "v": "lane"
+    },
+    {
+        "k": "lk",
+        "v": "lake"
+    },
+    {
+        "k": "lKs",
+        "v": "lakes"
+    },
+    {
+        "k": "lgt",
+        "v": "light"
+    },
+    {
+        "k": "lgts",
+        "v": "lights"
+    },
+    {
+        "k": "lf",
+        "v": "loaf"
+    },
+    {
+        "k": "lcK",
+        "v": "locK"
+    },
+    {
+        "k": "lcKs",
+        "v": "locKs"
+    },
+    {
+        "k": "ldg",
+        "v": "lodge"
+    },
+    {
+        "k": "mnr",
+        "v": "manor"
+    },
+    {
+        "k": "mnrs",
+        "v": "manors"
+    },
+    {
+        "k": "mdw",
+        "v": "meadow"
+    },
+    {
+        "k": "mdws",
+        "v": "meadows"
+    },
+    {
+        "k": "ml",
+        "v": "mill"
+    },
+    {
+        "k": "mls",
+        "v": "mills"
+    },
+    {
+        "k": "msn",
+        "v": "mission"
+    },
+    {
+        "k": "mt",
+        "v": "mount"
+    },
+    {
+        "k": "mtn",
+        "v": "mountain"
+    },
+    {
+        "k": "mtns",
+        "v": "mountains"
+    },
+    {
+        "k": "ncK",
+        "v": "necK"
+    },
+    {
+        "k": "orch",
+        "v": "orchard"
+    },
+    {
+        "k": "oval",
+        "v": "oval"
+    },
+    {
+        "k": "opas",
+        "v": "overpass"
+    },
+    {
+        "k": "psge",
+        "v": "passage"
+    },
+    {
+        "k": "pne",
+        "v": "pine"
+    },
+    {
+        "k": "pnes",
+        "v": "pines"
+    },
+    {
+        "k": "pln",
+        "v": "plain"
+    },
+    {
+        "k": "plns",
+        "v": "plains"
+    },
+    {
+        "k": "pt",
+        "v": "point"
+    },
+    {
+        "k": "pts",
+        "v": "points"
+    },
+    {
+        "k": "prt",
+        "v": "port"
+    },
+    {
+        "k": "prts",
+        "v": "ports"
+    },
+    {
+        "k": "pr",
+        "v": "prairie"
+    },
+    {
+        "k": "radl",
+        "v": "radial"
+    },
+    {
+        "k": "rnch",
+        "v": "ranch"
+    },
+    {
+        "k": "rpd",
+        "v": "rapid"
+    },
+    {
+        "k": "rpds",
+        "v": "rapids"
+    },
+    {
+        "k": "rst",
+        "v": "rest"
+    },
+    {
+        "k": "rdgs",
+        "v": "ridges"
+    },
+    {
+        "k": "riv",
+        "v": "river"
+    },
+    {
+        "k": "rds",
+        "v": "roads"
+    },
+    {
+        "k": "sr",
+        "v": "senior"
+    },
+    {
+        "k": "shl",
+        "v": "shoal"
+    },
+    {
+        "k": "shls",
+        "v": "shoals"
+    },
+    {
+        "k": "shr",
+        "v": "shore"
+    },
+    {
+        "k": "shrs",
+        "v": "shores"
+    },
+    {
+        "k": "spg",
+        "v": "spring"
+    },
+    {
+        "k": "spgs",
+        "v": "springs"
+    },
+    {
+        "k": "sqs",
+        "v": "squares"
+    },
+    {
+        "k": "sta",
+        "v": "station"
+    },
+    {
+        "k": "stra",
+        "v": "stravenue"
+    },
+    {
+        "k": "strm",
+        "v": "stream"
+    },
+    {
+        "k": "sts",
+        "v": "streets"
+    },
+    {
+        "k": "smt",
+        "v": "summit"
+    },
+    {
+        "k": "trwy",
+        "v": "throughway"
+    },
+    {
+        "k": "traK",
+        "v": "tracK"
+    },
+    {
+        "k": "trfy",
+        "v": "trafficway"
+    },
+    {
+        "k": "trl",
+        "v": "trail"
+    },
+    {
+        "k": "upas",
+        "v": "underpass"
+    },
+    {
+        "k": "un",
+        "v": "union"
+    },
+    {
+        "k": "uns",
+        "v": "unions"
+    },
+    {
+        "k": "vly",
+        "v": "valley"
+    },
+    {
+        "k": "vlys",
+        "v": "valleys"
+    },
+    {
+        "k": "via",
+        "v": "viaduct"
+    },
+    {
+        "k": "vw",
+        "v": "view"
+    },
+    {
+        "k": "vws",
+        "v": "views"
+    },
+    {
+        "k": "vlg",
+        "v": "village"
+    },
+    {
+        "k": "vlgs",
+        "v": "villages"
+    },
+    {
+        "k": "vl",
+        "v": "ville"
+    },
+    {
+        "k": "vis",
+        "v": "vista"
+    },
+    {
+        "k": "wl",
+        "v": "well"
+    },
+    {
+        "k": "wls",
+        "v": "wells"
+    },
+    {
+        "k": "wy",
+        "v": "way"
+    },
+    {
+        "k": "n",
+        "v": "north"
+    },
+    {
+        "k": "s",
+        "v": "south"
+    },
+    {
+        "k": "w",
+        "v": "west"
+    },
+    {
+        "k": "e",
+        "v": "east"
+    },
+    {
+        "k": "ne",
+        "v": "northeast"
+    },
+    {
+        "k": "nw",
+        "v": "northwest"
+    },
+    {
+        "k": "se",
+        "v": "southeast"
+    },
+    {
+        "k": "sw",
+        "v": "southwest"
+    }
+  ]
+}
