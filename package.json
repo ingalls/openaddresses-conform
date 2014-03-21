@@ -20,6 +20,8 @@
     "minimist": "0.0.8",
     "progress": "~1.1.4",
     "unzip": "~0.1.9",
-    "request": "~2.34.0"
+    "request": "~2.34.0",
+    "flow": "~0.2.3",
+    "execSync": "~1.0.1-pre"
   }
 }
