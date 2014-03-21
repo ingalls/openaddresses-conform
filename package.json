@@ -1,0 +1,22 @@
+{
+  "name": "openaddresses-conform",
+  "version": "0.0.1",
+  "description": "Standardize the format of the openaddresses dataset",
+  "main": "index.js",
+  "keywords": [
+    "openaddresses",
+    "addresses"
+  ],
+  "bin": {
+    "openaddresses-cache": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openaddresses/openaddress-conform.git"
+  },
+  "author": "",
+  "license": "PD",
+  "dependencies": {
+    "minimist": "0.0.8"
+  }
+}
