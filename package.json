@@ -22,6 +22,8 @@
     "unzip": "~0.1.9",
     "request": "~2.34.0",
     "flow": "~0.2.3",
-    "execSync": "~1.0.1-pre"
+    "execSync": "~1.0.1-pre",
+    "readline": "0.0.3",
+    "stream": "0.0.1"
   }
 }

@@ -60,71 +60,51 @@ exports.dropCol = function dropCol(keep, callback){
   });
 }
 
-//Joins two columns -> column is then named with name Value
-exports.mergeCol = function mergeCol(col1, col2, name, callback){
-  var fs = require('fs');
-  var readline = require('readline');
-  var stream = require('stream');
-  
-  var instream = fs.createReadStream('./tmp/out.csv');
-  var outstream = new stream;
-  var rl = readline.createInterface(instream, outstream);
-  var linenum = 1;
-  
-  var mergeArray = [];
-  var deleteElement, mergeElement; //Element to store merge in and element to delete
+//Joins Columns in order that they are given in array into 'street' column
+exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
+    var fs = require('fs'),
+        readline = require('readline'),
+        stream = require('stream'),
+        instream = fs.createReadStream(loc),
+        outstream = new stream,
+        rl = readline.createInterface(instream, outstream),
+        linenum = 1;
 
-  rl.on('line', function(line) {
-    var elements = line.split(',');
-    
-    if (linenum == 1){
-      elements = elements.join('|').toLowerCase().split('|');
-      col1 = col1.toLowerCase();
-      col2 = col2.toLowerCase();
+    console.log("  Merging Columns");
 
-      for (var i = 0; i < elements.length; i++){
-        if (elements[i] == col1){
-          elements[i] = name;
-          mergeArray.push('1');
-          mergeElement = i;
-        } else if (elements[i] == col2){
-          mergeArray.push('2');
-          elements.splice(i, 1);
-          deleteElement = i;
-        } else {
-          mergeArray.push('0');
-        }
-      } 
-      fs.appendFileSync('./tmp/tmp.csv', elements+'\n'); //Writes Headers to File
-    } else {
-      for (var i = 0; i < elements.length; i++){
-        var merge1, merge2;
-        
-        if (mergeArray[i] == '1') {
-          merge1 = elements[i];
-        } else if (mergeArray[i] == '2') {
-          merge2 = elements[i];
-        }
-      }
-      
-      elements[mergeElement] = merge1 + ' ' + merge2;
-      elements.splice(deleteElement, 1);
-      
-      fs.appendFileSync('./tmp/tmp.csv', elements + '\n');
+    for (var i = 0; i < cols.length; i++){
+        cols[i] = cols[i].toLowerCase();
     }
-    linenum++;
-  });
 
-  rl.on('close', function() {
+    rl.on('line', function(line) {
+        var elements = line.split(',');
     
-    var sh = require('execSync');
-    sh.run('rm ./tmp/out.csv');
-    sh.run('mv ./tmp/tmp.csv ./tmp/out.csv');
-    
-    process.nextTick(function(){
-      callback();
+        if (linenum == 1){
+            for (var i = 0; i < elements.length; i++) {
+                elements[i] = elements[i].toLowerCase();
+                for (var e = 0; e < cols.length; e++) {
+                    if (cols[e] == elements[i])
+                        cols[e] = i;
+                }
+            }
+            elements.splice(3,0,"street");
+            fs.appendFileSync('./tmp.csv', elements+'\n'); //Writes Headers to File
+        } else {
+            var street = "";
+
+            for (var i = 0; i < cols.length; i++){
+                street = street + " " +  elements[cols[i]];
+            }
+            elements.splice(3,0,street);
+            fs.appendFileSync('./tmp.csv', elements+'\n');
+        }
+        ++linenum;
     });
-  });
+
+    rl.on('close', function() {
+        process.exit(0);
+        callback();
+    });
 }
 
 exports.expand = function expand(callback){
@@ -265,8 +245,6 @@ exports.splitAddress = function splitAddress(col, numFields, callback){
   });
 }
 
-exports.none = function none(callback){
-  process.nextTick(function(){
+exports.none = function none(callback) {
     callback();
-  });
 }
