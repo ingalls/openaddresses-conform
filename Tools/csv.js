@@ -67,6 +67,8 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         outstream = new stream,
         rl = readline.createInterface(instream, outstream),
         linenum = 1;
+    if (fs.exists('./tmp.csv'))
+        fs.unlinkSync('./tmp.csv');
 
     console.log("  Merging Columns");
 
@@ -93,14 +95,17 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
             for (var i = 0; i < cols.length; i++){
                 street = street + " " +  elements[cols[i]];
             }
-            elements.splice(3,0,street);
+            elements.splice(3,0,street.trim());
             fs.appendFileSync('./tmp.csv', elements+'\n');
         }
         ++linenum;
     });
 
     rl.on('close', function() {
-        process.exit(0);
+        fs.unlinkSync(loc);
+        fs.createReadStream('./tmp.csv').pipe(fs.createWriteStream(loc));
+        fs.unlinkSync('./tmp.csv');
+        
         callback();
     });
 }
