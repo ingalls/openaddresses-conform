@@ -65,7 +65,7 @@ function unzipCache() {
         write = fstream.Writer(cacheDir + source.replace(".json","") + "/");
 
     write.on('close', function() {
-        console.log("  Finished Unzipping");
+        console.log("  Finished Decompression"); //Daisy, Daisy...
         conformCache();
     });
 
@@ -91,6 +91,13 @@ function conformCache(){
                 csv.mergeStreetName(parsed.conform.merge,cacheDir + source.replace(".json", "") + "/out.csv",this);
             else
                 csv.none(this);
+        }, function(err) { //Split Address Columns
+            if (err) errorHandle(err);
+
+            if (parsed.conform.split)
+                csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", this);
+            else
+                csv.none(this);
         }, function(err) { //Drop Columns
             if (err) errorHandle(err);
 
@@ -98,17 +105,17 @@ function conformCache(){
             var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
 
             csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", this);
-        }, function(err) {
+        }, function(err) { //Expand Abbreviations & Fix Capitalization
             if (err) errorHandle(err);
 
             var csv = require('./Tools/csv');
             csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", this);
             
-        }, function(err) {
+        }, function(err) { //Start Next Download
             if (err) errorHandle(err);
             
             console.log("Complete");
-            //downloadCache(++cacheIndex);
+            downloadCache(++cacheIndex);
         }
     );
 
