@@ -1,13 +1,18 @@
-exports.dropCol = function dropCol(keep, callback){
-    var fs = require('fs');
-    var readline = require('readline');
-    var stream = require('stream');
-  
-    var instream = fs.createReadStream('./tmp/out.csv');
-    var outstream = new stream;
-    var rl = readline.createInterface(instream, outstream);
+exports.dropCol = function dropCol(keep, loc, callback){
+    var fs = require('fs'),
+        readline = require('readline'),
+        stream = require('stream');
 
-    var keepArray = []; //Stores the column numbers to keep
+    console.log("  Dropping Unnecessary Data");
+
+    if (fs.exists('./tmp.csv'))
+        fs.unlinkSync('./tmp.csv');
+  
+    var instream = fs.createReadStream(loc),
+        outstream = new stream;
+
+    var rl = readline.createInterface(instream, outstream),
+        keepArray = []; //Stores the column numbers to keep
 
     var linenum = 1;
 
@@ -15,12 +20,13 @@ exports.dropCol = function dropCol(keep, callback){
         var elements = line.split(',');
     
         if (linenum == 1){
-            fs.appendFileSync('./tmp/final.csv', 'LON, LAT, NUMBER, STREET\n'); //Ready Output File
+            fs.appendFileSync('./tmp.csv', 'LON, LAT, NUMBER, STREET\n'); //Ready Output File
+            
             elements = elements.join('|').toLowerCase().split('|');
             keep = keep.join('|').toLowerCase().split('|');
       
             keepArray.push('lon'); //X Must be first column
-            eepArray.push('lat'); //Y Must be 2nd column
+            keepArray.push('lat'); //Y Must be 2nd column
       
             for (var i = 2; i < elements.length; i++){
                 if (elements[i] == keep[2])
@@ -44,17 +50,23 @@ exports.dropCol = function dropCol(keep, callback){
                     str = elements[i];
                 }
             }
-      
-            fs.appendFileSync('./tmp/final.csv', lon + ',' + lat + ',' + parseInt(num) + ',' + str + '\n');
-      
+
+            fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + parseInt(num) + ',' + str + '\n');
         }
 
         linenum++;
     });
 
-
     rl.on('close', function() {
-        callback();
+        fs.unlinkSync(loc);
+        var write = fs.createWriteStream(loc);
+
+        write.on('close', function() {
+            fs.unlinkSync('./tmp.csv');
+            callback();
+        });
+        
+        fs.createReadStream('./tmp.csv').pipe(write);
     });
 }
 
@@ -103,20 +115,24 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
 
     rl.on('close', function() {
         fs.unlinkSync(loc);
-        fs.createReadStream('./tmp.csv').pipe(fs.createWriteStream(loc));
-        fs.unlinkSync('./tmp.csv');
+        var write = fs.createWriteStream(loc);
+
+        write.on('close', function() {
+            fs.unlinkSync('./tmp.csv');
+            callback();
+        });
         
-        callback();
+        fs.createReadStream('./tmp.csv').pipe(write);
     });
 }
 
-exports.expand = function expand(callback) {
+exports.expand = function expand(loc, callback) {
     var fs = require('fs'),
         readline = require('readline'),
         stream = require('stream'),
         expand = require('./expand.json');
         
-    var instream = fs.createReadStream('./tmp/final.csv'),
+    var instream = fs.createReadStream(loc),
         outstream = new stream,
         rl = readline.createInterface(instream, outstream),
         linenum = 1;
@@ -125,9 +141,8 @@ exports.expand = function expand(callback) {
         var elements = line.split(',');
     
         if (linenum == 1) {
-            fs.appendFileSync('./tmp/tmp.csv', elements+'\n'); //Write Headers
+            fs.appendFileSync('./tmp.csv', elements+'\n'); //Write Headers
         } else {
-      
             elements[3] = elements[3].toLowerCase();
             elements[3] = elements[3].replace(/\./g,'');
       
@@ -165,19 +180,19 @@ exports.expand = function expand(callback) {
             }
 
             elements[3] = tokenized.join(" ");
+            elements[3] = elements[3].toLowerCase().replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
       
-            fs.appendFileSync('./tmp/tmp.csv', elements+'\n');
+            fs.appendFileSync('./tmp.csv', elements+'\n');
         }
     
         linenum++;
     });
 
     rl.on('close', function() {
-    
-        var sh = require('execSync');
-        sh.run('rm ./tmp/final.csv');
-        sh.run('mv ./tmp/tmp.csv ./tmp/final.csv');
-    
+        fs.unlinkSync(loc);
+        fs.createReadStream('./tmp.csv').pipe(fs.createWriteStream(loc));
+        fs.unlinkSync('./tmp.csv');
+        
         callback();
     });
 }

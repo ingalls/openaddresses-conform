@@ -86,13 +86,29 @@ function conformCache(){
         }, function(err) { //Merge Columns
             if (err) errorHandle(err);
             csv = require('./Tools/csv');
+            
             if (parsed.conform.merge)
-                csv.mergeStreetName(parsed.conform.merge,cacheDir + source.replace(".json","") + "/out.csv",this);
+                csv.mergeStreetName(parsed.conform.merge,cacheDir + source.replace(".json", "") + "/out.csv",this);
             else
                 csv.none(this);
+        }, function(err) { //Drop Columns
+            if (err) errorHandle(err);
+
+            var csv = require('./Tools/csv');
+            var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
+
+            csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", this);
         }, function(err) {
+            if (err) errorHandle(err);
+
+            var csv = require('./Tools/csv');
+            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", this);
+            
+        }, function(err) {
+            if (err) errorHandle(err);
+            
             console.log("Complete");
-            downloadCache(++cacheIndex);
+            //downloadCache(++cacheIndex);
         }
     );
 
