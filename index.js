@@ -87,9 +87,9 @@ function conformCache(){
         }, function(err) { //Merge Columns
             if (err) errorHandle(err);
             csv = require('./Tools/csv');
-            
+
             if (parsed.conform.merge)
-                csv.mergeStreetName(parsed.conform.merge,cacheDir + source.replace(".json", "") + "/out.csv",this);
+                csv.mergeStreetName(parsed.conform.merge.slice(0),cacheDir + source.replace(".json", "") + "/out.csv",this);
             else
                 csv.none(this);
         }, function(err) { //Split Address Columns
