@@ -1,8 +1,13 @@
 openaddresses-conform
 =====================
 
-A utility to download the openaddresses cache and wrangle them into a standardized format
+A utility to download the openaddresses cache and wrangle them into a standardized format. Work in progress.
 
-Dependencies:
+## Installation
 
-ogr2ogr
+- Install [GDAL](http://www.gdal.org/).
+- Run `npm install` in project directory
+
+## Run
+
+    `node index.js`
