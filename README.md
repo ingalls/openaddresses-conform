@@ -10,4 +10,4 @@ A utility to download the openaddresses cache and wrangle them into a standardiz
 
 ## Run
 
-    `node index.js`
+    node index.js
