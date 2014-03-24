@@ -88,6 +88,8 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         cols[i] = cols[i].toLowerCase();
     }
 
+    console.log(cols);
+
     rl.on('line', function(line) {
         var elements = line.split(',');
     
@@ -95,8 +97,9 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
             for (var i = 0; i < elements.length; i++) {
                 elements[i] = elements[i].toLowerCase();
                 for (var e = 0; e < cols.length; e++) {
-                    if (cols[e] == elements[i])
+                    if (cols[e] == elements[i]){
                         cols[e] = i;
+                    }
                 }
             }
             elements.splice(3,0,"street");
@@ -146,7 +149,7 @@ exports.expand = function expand(loc, callback) {
             elements[3] = elements[3].toLowerCase();
             elements[3] = elements[3].replace(/\./g,'');
       
-            if (linenum % 1000 == 0)
+            if (linenum % 10000 == 0)
                 console.log('  Processed Addresses: ' + linenum);
       
       
