@@ -5,7 +5,8 @@ var argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
     ProgressBar = require('progress'),
     unzip = require('unzip'),
-    request = require('request');
+    request = require('request'),
+    AWS = require('aws-sdk');
 
 //Command Line Args
 var sourceDir = argv._[0],
@@ -115,7 +116,7 @@ function conformCache(){
             if (err) errorHandle(err);
             
             console.log("Complete");
-            downloadCache(++cacheIndex);
+            updateCache();
         }
     );
 
@@ -126,6 +127,39 @@ function errorHandle(err){
     console.log("Skipping to next source");
     downloadCache(++cacheIndex);
 }
+
+function updateManifest() {
+    fs.writeFileSync(sourceDir + source, JSON.stringify(parsed, null, 4));
+    console.log("  Updating Manifest of " + source);
+}
+
+function updateCache() {
+    parsed.processed = "http://s3.amazonaws.com/openaddresses/" + source.replace(".json", ".csv");
+    
+    console.log("  Updating s3 with " + source);
+    
+    var s3 = new AWS.S3();
+    fs.readFile(cacheDir + source.replace(".json", "") + "/out.csv", function (err, data) {
+        if (err)
+            throw new Error('Could not find data to upload'); 
+        
+        var buffer = new Buffer(data, 'binary');
+
+        var s3 = new AWS.S3();
+        
+        s3.client.putObject({
+            Bucket: 'openaddresses',
+            Key: source.replace(".json", ".csv"),
+            Body: buffer,
+            ACL: 'public-read'
+        }, function (response) {
+            console.log('  Successfully uploaded package.');
+            updateManifest();
+            downloadCache(++cacheIndex);
+        });
+    });
+}
+
 
 function showProgress(stream) {
     var bar;

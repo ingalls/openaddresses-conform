@@ -24,6 +24,7 @@
     "flow": "~0.2.3",
     "execSync": "~1.0.1-pre",
     "readline": "0.0.3",
-    "stream": "0.0.1"
+    "stream": "0.0.1",
+    "aws-sdk": "~2.0.0-rc12"
   }
 }
