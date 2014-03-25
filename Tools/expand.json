@@ -53,6 +53,10 @@
         "v": "crescent"
     },
     {
+        "k": "cr",
+        "v": "crescent"
+    },
+    {
         "k": "crt",
         "v": "court"
     },
@@ -173,6 +177,10 @@
         "v": "square"
     },
     {
+        "k": "terr",
+        "v": "terrace"
+    },
+    {
         "k": "tr",
         "v": "terrace"
     },
@@ -279,6 +287,10 @@
     {
         "k": "ctrs",
         "v": "centers"
+    },
+    {
+        "k": "cl",
+        "v": "close"
     },
     {
         "k": "cirs",
