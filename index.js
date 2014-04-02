@@ -73,12 +73,18 @@ function downloadCache(index) {
         var stream = request(parsed.cache);
 
         showProgress(stream);
-        stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip")));
+
+        if (parsed.conform.type == "geojson")
+            stream.pipe(fs.createWriteStream(cacheDir + source));
+        else
+            stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip")));
     }
 }
 
 function unzipCache() {
     var fstream = require('fstream');
+
+    console.log("  Starting Decompression");
 
     fs.mkdirSync(cacheDir + source.replace(".json",""));
     
@@ -100,9 +106,11 @@ function conformCache(){
         function() { //Convert Shapefile
             var convert = require('./Tools/convert');
             
-            if (parsed.conform.type == "shapefile"){
+            if (parsed.conform.type == "shapefile")
                 convert.shp2csv(cacheDir + source.replace(".json","") + "/", this);
-            } else
+            else if (parsed.conform.type == "geojson")
+                convert.json2csv(cacheDir + source, this);
+            else
                 downloadCache(++cacheIndex);
         }, function(err) { //Merge Columns
             if (err) errorHandle(err);
@@ -195,6 +203,9 @@ function showProgress(stream) {
     stream.on('data', function(chunk) {
         if (bar) bar.tick(chunk.length);
     }).on('end', function() {
-        unzipCache();
+        if (parsed.compression == "zip")
+            unzipCache();
+        else
+            conformCache();
     });
 }
