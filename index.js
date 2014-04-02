@@ -17,17 +17,37 @@ var cacheIndex = 0,
     parsed;
 
 if (!sourceDir || !cacheDir) {
-    throw new Error('usage: openaddresses-conform <path-to-sources> <path-to-cache>');
+    console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache>');
+    console.log('       openaddresses-conform  <single source>  <path-to-cache>');
+    process.exit(0);
 }
 
-//Setup list of sources
-var sources = fs.readdirSync(sourceDir);
+if (cacheDir.substr(cacheDir.length-1) != "/")
+    cacheDir = cacheDir + "/";
 
-//Only retain *.json
-for (var i = 0; i < sources.length; i++) {
-    if (sources[i].indexOf('.json') == -1) {
-        sources.splice(i, 1);
-        i--;
+var sources = [];
+
+if (sourceDir.indexOf(".json") != -1) {
+    var dir = sourceDir.split("/"),
+        singleSource = dir[dir.length-1];
+
+    sourceDir = sourceDir.replace(singleSource,"");
+    
+    sources.push(singleSource);
+} else {
+    //Catch missing /
+    if (sourceDir.substr(sourceDir.length-1) != "/")
+        sourceDir = sourceDir + "/";
+
+    //Setup list of sources
+    sources = fs.readdirSync(sourceDir);
+
+    //Only retain *.json
+    for (var i = 0; i < sources.length; i++) {
+        if (sources[i].indexOf('.json') == -1) {
+            sources.splice(i, 1);
+            i--;
+        }
     }
 }
 
@@ -48,7 +68,7 @@ function downloadCache(index) {
         console.log("Skipping: " + source);
         downloadCache(++cacheIndex);
     } else {
-        console.log("Downloading: " + source);
+        console.log("Processing: " + source);
 
         var stream = request(parsed.cache);
 
@@ -165,7 +185,7 @@ function showProgress(stream) {
     var bar;
     stream.on('response', function(res) {
         var len = parseInt(res.headers['content-length'], 10);
-        bar = new ProgressBar('  downloading [:bar] :percent :etas', {
+        bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
             complete: '=',
             incomplete: '-',
             width: 20,
