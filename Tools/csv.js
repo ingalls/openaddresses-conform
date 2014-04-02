@@ -88,8 +88,6 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         cols[i] = cols[i].toLowerCase();
     }
 
-    console.log(cols);
-
     rl.on('line', function(line) {
         var elements = line.split(',');
     
