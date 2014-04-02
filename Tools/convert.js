@@ -29,22 +29,36 @@ exports.json2csv = function json2csv(file, callback) {
     var dir = file.split("/"),
         sourceDir = file.replace(dir[dir.length-1],"");
 
-    //fs.writeFileSync(sourceDir + "out.csv", ,
-
     var stream = fs.createReadStream(file).pipe(geojson.parse());
 
-    var headers = "X, Y, ";
+    var headers = "X,Y,";
 
     stream.on('data', function(data){
-        
         if (start) {
-            headers = headers + Object.keys(data.properties).join(', ');
+            headers = headers + Object.keys(data.properties).join(',');
             start = false;
-            console.log(headers);
-        } else {
-            for (var elem in data.property) {
-                process.exit(0);
+            try {
+                fs.mkdirSync(file.replace(".json",""));
+            } catch(err) {
+                console.log("  Folder Exists");
             }
+            fs.writeFileSync(file.replace(".json","") + "/out.csv", headers + "\n");
+            headers = headers.split(',');
+        } else {
+            var row = [];
+            row[0] = data.geometry.coordinates[0];
+            row[1] = data.geometry.coordinates[1];
+            
+            for (var elem in data.properties) {
+                if (headers.indexOf(elem) != -1){
+                    row[headers.indexOf(elem)] = data.properties[elem];
+                }
+            }
+            fs.appendFileSync(file.replace(".json","") + "/out.csv", row + "\n");
         }
+    });
+
+    stream.on('close', function(){
+        callback();
     });
 }
