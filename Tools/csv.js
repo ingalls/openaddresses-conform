@@ -100,7 +100,7 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
                     }
                 }
             }
-            elements.splice(3,0,"street");
+            elements.splice(3,0,"auto_street");
             fs.appendFileSync('./tmp.csv', elements+'\n'); //Writes Headers to File
         } else {
             var street = "";

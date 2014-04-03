@@ -103,7 +103,7 @@ function conformCache(){
     var flow = require('flow');
 
     flow.exec(
-        function() { //Convert Shapefile
+        function() { //Convert to CSV
             var convert = require('./Tools/convert');
             
             if (parsed.conform.type == "shapefile")
@@ -114,6 +114,10 @@ function conformCache(){
                 downloadCache(++cacheIndex);
         }, function(err) { //Merge Columns
             if (err) errorHandle(err);
+
+            if (parsed.conform.test) //Stops at converting to find col names
+                process.exit(0);
+            
             csv = require('./Tools/csv');
 
             if (parsed.conform.merge)
