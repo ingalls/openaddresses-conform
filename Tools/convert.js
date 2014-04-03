@@ -50,9 +50,10 @@ exports.json2csv = function json2csv(file, callback) {
             row[1] = data.geometry.coordinates[1];
             
             for (var elem in data.properties) {
-                if (headers.indexOf(elem) != -1){
-                    row[headers.indexOf(elem)] = data.properties[elem];
-                }
+                if (headers.indexOf(elem) != -1 && data.properties[elem])
+                    row[headers.indexOf(elem)] = data.properties[elem].toString().replace(",","");
+                else
+                    row[headers.indexOf(elem)] = "";
             }
             fs.appendFileSync(file.replace(".json","") + "/out.csv", row + "\n");
         }
