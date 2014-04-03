@@ -51,7 +51,7 @@ exports.json2csv = function json2csv(file, callback) {
             
             for (var elem in data.properties) {
                 if (headers.indexOf(elem) != -1 && data.properties[elem])
-                    row[headers.indexOf(elem)] = data.properties[elem].toString().replace(",","");
+                    row[headers.indexOf(elem)] = data.properties[elem].toString().replace(",","").replace(/(\r\n|\n|\r)/gm,"");
                 else
                     row[headers.indexOf(elem)] = "";
             }
