@@ -50,12 +50,15 @@ exports.json2csv = function json2csv(file, callback) {
             row[1] = data.geometry.coordinates[1];
             
             for (var elem in data.properties) {
-                if (headers.indexOf(elem) != -1 && data.properties[elem])
-                    row[headers.indexOf(elem)] = data.properties[elem].toString().replace(",","").replace(/(\r\n|\n|\r)/gm,"");
-                else
+                if (headers.indexOf(elem) != -1 && data.properties[elem]) {
+                    var value = data.properties[elem].toString().replace(/\s*,\s*/g, ' ').replace(/(\r\n|\n|\r)/gm,"")
+                    console.log(value);
+                    row[headers.indexOf(elem)] = value;
+                } else
                     row[headers.indexOf(elem)] = "";
             }
             fs.appendFileSync(file.replace(".json","") + "/out.csv", row + "\n");
+            process.exit(0);
         }
     });
 
