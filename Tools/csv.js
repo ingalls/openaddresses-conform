@@ -228,7 +228,7 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         var elements = line.split(',');
     
         if (linenum == 1){
-            fs.appendFileSync('./tmp.csv', elements+ ',auto_num,auto_str\n'); //Write Headers
+            fs.appendFileSync('./tmp.csv', elements+ ',auto_number,auto_street\n'); //Write Headers
             length = elements.length + 1; //Stores index of auto_num
       
             for (var i = 0; i < elements.length; i++){
