@@ -238,21 +238,23 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
                 element = i;
             }
         } else {
-            var token = elements[element].split(' ');
-            var street = token[numFields];
-            var number = token[0];
-    
-            for (var num = 1; num < numFields; num++){
-                number = number + " " + token[num];
+            if (elements[element]) {
+                var token = elements[element].split(' ');
+                var street = token[numFields];
+                var number = token[0];
+        
+                for (var num = 1; num < numFields; num++){
+                    number = number + " " + token[num];
+                }
+          
+                for (var str = numFields+1; str < token.length; str++){
+                    street = street + " " + token[str];
+                }
+          
+                elements[length - 1] = number;
+                elements[length] = street;
+                fs.appendFileSync('./tmp.csv', elements + '\n');
             }
-      
-            for (var str = numFields+1; str < token.length; str++){
-                street = street + " " + token[str];
-            }
-      
-            elements[length - 1] = number;
-            elements[length] = street;
-            fs.appendFileSync('./tmp.csv', elements + '\n');
         }
 
         linenum++;
