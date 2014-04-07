@@ -138,7 +138,7 @@ function conformCache(){
             var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
 
             csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", this);
-        }, function(err) { //Expand Abbreviations & Fix Capitalization & drop ignored values (`ignore`)
+        }, function(err) { //Expand Abbreviations, Fix Capitalization & drop null rows
             if (err) errorHandle(err);
 
             var csv = require('./Tools/csv');

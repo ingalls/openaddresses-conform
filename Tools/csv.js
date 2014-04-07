@@ -144,45 +144,48 @@ exports.expand = function expand(loc, callback) {
         if (linenum == 1) {
             fs.appendFileSync('./tmp.csv', elements+'\n'); //Write Headers
         } else {
-            elements[3] = elements[3].toLowerCase();
-            elements[3] = elements[3].replace(/\./g,'');
-  
-            if (linenum % 10000 == 0)
-                console.log('  Processed Addresses: ' + linenum);
+            if (elements[2] !== "NaN" && elements[3]) {
+                
+                elements[3] = elements[3].toLowerCase();
+                elements[3] = elements[3].replace(/\./g,'');
       
-            for (var i = 0; i < expand.abbr.length; i++) {
-                var key = expand.abbr[i].k;
-                var value = expand.abbr[i].v
-                var tokenized = elements[3].split(' ');
-        
-                for(var e = 0; e < tokenized.length; e++) {
-                    if (tokenized[e] == key)
-                    tokenized[e] = value;
-                }
-        
-                elements[3] = tokenized.join(' ');
-            }
-      
-            //Take care of the pesky st vs saint
-            var tokenized = elements[3].split(' ');
-            var length = tokenized.length;
-      
-            //Only converts to street if in the last half of the words
-            for (var i = 0; length - i >= Math.floor(length/2); i++) {
-                if (tokenized[length - i] === "st")
-                    tokenized[length - i] = "street";
-            }
+                if (linenum % 10000 == 0)
+                    console.log('  Processed Addresses: ' + linenum);
+          
+                for (var i = 0; i < expand.abbr.length; i++) {
+                    var key = expand.abbr[i].k;
+                    var value = expand.abbr[i].v
+                    var tokenized = elements[3].split(' ');
             
-            //Only converts to saint if in the last half of the words
-            for (var i = 0; i <= Math.ceil(length/2); i++) {
-                if (tokenized[i] === "st")
-                    tokenized[i] = "saint";
-            }
+                    for(var e = 0; e < tokenized.length; e++) {
+                        if (tokenized[e] == key)
+                        tokenized[e] = value;
+                    }
+            
+                    elements[3] = tokenized.join(' ');
+                }
+          
+                //Take care of the pesky st vs saint
+                var tokenized = elements[3].split(' ');
+                var length = tokenized.length;
+          
+                //Only converts to street if in the last half of the words
+                for (var i = 0; length - i >= Math.floor(length/2); i++) {
+                    if (tokenized[length - i] === "st")
+                        tokenized[length - i] = "street";
+                }
+                
+                //Only converts to saint if in the last half of the words
+                for (var i = 0; i <= Math.ceil(length/2); i++) {
+                    if (tokenized[i] === "st")
+                        tokenized[i] = "saint";
+                }
 
-            elements[3] = tokenized.join(" ");
-            elements[3] = elements[3].toLowerCase().replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
-      
-            fs.appendFileSync('./tmp.csv', elements+'\n');
+                elements[3] = tokenized.join(" ");
+                elements[3] = elements[3].toLowerCase().replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
+          
+                fs.appendFileSync('./tmp.csv', elements+'\n');
+            }
         }
     
         linenum++;
