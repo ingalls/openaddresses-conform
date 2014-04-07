@@ -142,7 +142,7 @@ function conformCache(){
             if (err) errorHandle(err);
 
             var csv = require('./Tools/csv');
-            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", parsed.conform, this);
+            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", this);
             
         }, function(err) { //Start Next Download
             if (err) errorHandle(err);

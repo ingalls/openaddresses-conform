@@ -34,7 +34,7 @@ exports.json2csv = function json2csv(file, callback) {
     var headers = "X,Y,";
 
     stream.on('data', function(data){
-        if (start) {
+        if (start) { //Headers
             headers = headers + Object.keys(data.properties).join(',');
             start = false;
             try {
@@ -44,14 +44,10 @@ exports.json2csv = function json2csv(file, callback) {
             }
             fs.writeFileSync(file.replace(".json","") + "/out.csv", headers + "\n");
             headers = headers.split(',');
-        } else {
+        } else { //Data
             var row = [];
 
-            if (data.geometry.coordinates.length == 2) { //Handle Points
-                row[0] = data.geometry.coordinates[0];
-                row[1] = data.geometry.coordinates[1];
-            } else { //Handle polygons
-
+            if (data.geometry.coordinates[0][0]) { //Handle Polygons
                 var center = function(arr) {
                     var minX, maxX, minY, maxY;
                     for (var i=0; i< arr.length; i++) {
@@ -64,6 +60,9 @@ exports.json2csv = function json2csv(file, callback) {
                 }
 
                 row = center(data.geometry.coordinates[0]);
+            } else { //Handle Points
+                row[0] = data.geometry.coordinates[0];
+                row[1] = data.geometry.coordinates[1];
             }
             
             for (var elem in data.properties) {
