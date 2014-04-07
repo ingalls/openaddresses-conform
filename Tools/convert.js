@@ -46,8 +46,25 @@ exports.json2csv = function json2csv(file, callback) {
             headers = headers.split(',');
         } else {
             var row = [];
-            row[0] = data.geometry.coordinates[0];
-            row[1] = data.geometry.coordinates[1];
+
+            if (data.geometry.coordinates.length == 2) { //Handle Points
+                row[0] = data.geometry.coordinates[0];
+                row[1] = data.geometry.coordinates[1];
+            } else { //Handle polygons
+
+                var center = function(arr) {
+                    var minX, maxX, minY, maxY;
+                    for (var i=0; i< arr.length; i++) {
+                        minX = (arr[i][0] < minX || minX == null) ? arr[i][0] : minX;
+                        maxX = (arr[i][0] > maxX || maxX == null) ? arr[i][0] : maxX;
+                        minY = (arr[i][1] < minY || minY == null) ? arr[i][1] : minY;
+                        maxY = (arr[i][1] > maxY || maxY == null) ? arr[i][1] : maxY;
+                    }
+                    return [(minX + maxX) /2, (minY + maxY) /2];
+                }
+
+                row = center(data.geometry.coordinates[0]);
+            }
             
             for (var elem in data.properties) {
                 if (headers.indexOf(elem) != -1 && data.properties[elem])
