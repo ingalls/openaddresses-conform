@@ -86,7 +86,13 @@ function unzipCache() {
 
     console.log("  Starting Decompression");
 
-    fs.mkdirSync(cacheDir + source.replace(".json",""));
+    if (!fs.existsSync(cacheDir + source.replace(".json","")))
+        fs.mkdirSync(cacheDir + source.replace(".json",""));
+    else {
+        console.log("  Folder Exists");
+        if (fs.existsSync(cacheDir + source.replace(".json","") + "/out.csv"))
+            fs.unlinkSync(cacheDir + source.replace(".json","") + "/out.csv");
+    }
     
     var read = fs.createReadStream(cacheDir + source.replace(".json", ".zip")),
         write = fstream.Writer(cacheDir + source.replace(".json","") + "/");
@@ -105,9 +111,9 @@ function conformCache(){
     flow.exec(
         function() { //Convert to CSV
             var convert = require('./Tools/convert');
-            
+
             if (parsed.conform.type == "shapefile")
-                convert.shp2csv(cacheDir + source.replace(".json","") + "/", this);
+                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
             else if (parsed.conform.type == "geojson")
                 convert.json2csv(cacheDir + source, this);
             else

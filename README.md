@@ -40,6 +40,10 @@ Conform data can be found in the source files of the openaddresses project. Conf
 
 `street` The name of the street column. This will either be the name of the column or `auto_street` if the split or merge tools were used.
 
+`file` The majority of zips contain a single shapefile. Sometimes zips will contain multiple files, or the shapefile that is needed is located in a folder
+hierarchy in the zip. Since the program only supports determining single shapefiles not in a subfolder, file can be used to point the program to an exact file.
+The proper syntax would be `"file": "addresspoints/address.shp"` if the file was under a single subdirectory called `addresspoints`. Note there is no preceding forward slash.
+
 It should be noted that during the conversion, all column names are lowercased and stripped of newline characters and commas are converted to spaces.
 
 The last tag is used for testing only and must not be pushed to the git repo as the conversion scripts will stop on its detection.
