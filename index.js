@@ -61,23 +61,28 @@ function downloadCache(index) {
     }
 
     source = sources[index];
-    
-    parsed = JSON.parse(fs.readFileSync(sourceDir + source, 'utf8'));
 
-    if (!parsed.cache || parsed.skip === true || !parsed.conform) {
-        console.log("Skipping: " + source);
-        downloadCache(++cacheIndex);
-    } else {
-        console.log("Processing: " + source);
+    try {
+        parsed = JSON.parse(fs.readFileSync(sourceDir + source, 'utf8'));
 
-        var stream = request(parsed.cache);
+        if (!parsed.cache || parsed.skip === true || !parsed.conform) {
+            console.log("Skipping: " + source);
+            downloadCache(++cacheIndex);
+        } else {
+            console.log("Processing: " + source);
 
-        showProgress(stream);
+            var stream = request(parsed.cache);
 
-        if (parsed.conform.type == "geojson")
-            stream.pipe(fs.createWriteStream(cacheDir + source));
-        else
-            stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip")));
+            showProgress(stream);
+
+            if (parsed.conform.type == "geojson")
+                stream.pipe(fs.createWriteStream(cacheDir + source));
+            else
+                stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip")));
+        }
+    } catch (err) {
+        console.log("Malformed JSON!");
+        downloadCache(++index);
     }
 }
 

@@ -106,7 +106,8 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
             var street = "";
 
             for (var i = 0; i < cols.length; i++){
-                street = street + " " +  elements[cols[i]];
+                if (elements[cols[i]])
+                    street = street.trim() + " " +  elements[cols[i]].trim();
             }
             elements.splice(3,0,street.trim());
             fs.appendFileSync('./tmp.csv', elements+'\n');
