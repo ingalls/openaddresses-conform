@@ -119,6 +119,8 @@ function conformCache(){
 
             if (parsed.conform.type == "shapefile")
                 convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
+            else if (parsed.conform.type == "shapefile-polygon")
+                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
             else if (parsed.conform.type == "geojson")
                 convert.json2csv(cacheDir + source, this);
             else

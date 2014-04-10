@@ -143,9 +143,9 @@ exports.expand = function expand(loc, callback) {
         var elements = line.split(',');
     
         if (linenum == 1) {
-            fs.appendFileSync('./tmp.csv', elements+'\n'); //Write Headers
+            fs.writeFileSync('./tmp.csv', elements+'\n'); //Write Headers
         } else {
-            if (elements[2] !== "NaN" && elements[3]) {
+            if (elements[0] !=="NaN" && elements[1] !=="NaN" && elements[2] !== "NaN" && elements[3]) {
                 
                 elements[3] = elements[3].toLowerCase();
                 elements[3] = elements[3].replace(/\./g,'');
