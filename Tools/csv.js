@@ -9,7 +9,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
         fs.unlinkSync('./tmp.csv');
   
     var instream = fs.createReadStream(loc),
-        outstream = new stream;
+        outstream = new stream();
 
     var rl = readline.createInterface(instream, outstream),
         keepArray = []; //Stores the column numbers to keep
@@ -68,7 +68,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
         
         fs.createReadStream('./tmp.csv').pipe(write);
     });
-}
+};
 
 //Joins Columns in order that they are given in array into 'street' column
 exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
@@ -76,7 +76,7 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         readline = require('readline'),
         stream = require('stream'),
         instream = fs.createReadStream(loc),
-        outstream = new stream,
+        outstream = new stream(),
         rl = readline.createInterface(instream, outstream),
         linenum = 1;
     if (fs.exists('./tmp.csv'))
@@ -126,7 +126,7 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         
         fs.createReadStream('./tmp.csv').pipe(write);
     });
-}
+};
 
 exports.expand = function expand(loc, callback) {
     var fs = require('fs'),
@@ -135,7 +135,7 @@ exports.expand = function expand(loc, callback) {
         expand = require('./expand.json');
         
     var instream = fs.createReadStream(loc),
-        outstream = new stream,
+        outstream = new stream(),
         rl = readline.createInterface(instream, outstream),
         linenum = 1;
 
@@ -150,7 +150,7 @@ exports.expand = function expand(loc, callback) {
                 elements[3] = elements[3].toLowerCase();
                 elements[3] = elements[3].replace(/\./g,'');
       
-                if (linenum % 10000 == 0)
+                if (linenum % 10000 === 0)
                     console.log('  Processed Addresses: ' + linenum);
           
                 for (var i = 0; i < expand.abbr.length; i++) {
@@ -203,7 +203,7 @@ exports.expand = function expand(loc, callback) {
         
         fs.createReadStream('./tmp.csv').pipe(write);
     });
-}
+};
 
 //If the address is given as one field
 //This will take a given number of fields as the number address (numFields)
@@ -274,8 +274,65 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         
         fs.createReadStream('./tmp.csv').pipe(write);
     });
-}
+};
+
+exports.deDup = function deDup(loc, callback) {
+    var fs = require('fs'),
+        readline = require('readline'),
+        stream = require('stream');
+        
+    var instream = fs.createReadStream(loc),
+        outstream = new stream,
+        rl = readline.createInterface(instream, outstream),
+        linenum = 1;
+
+    rl.on('line', function(line) {
+        var elements = line.split(',');
+    
+        if (linenum == 1) {
+            fs.writeFileSync('./tmp.csv', elements+'\n'); //Write Headers
+        } else {
+            rl.pause();
+
+            var tmpin = fs.createReadStream(loc),
+                tmpout = new stream,
+                tmpLine = readline.createInterface(tmpin, tmpout),
+                tmpnum = 1,
+                duplicate = false,
+                dupCount = 0;
+
+                tmpLine.on('line', function(line) {
+                    var tmpElements = line.split(',');
+
+                    if (elements[2] === tmpElements[2] || elements[3] === tmpElements[3])
+                        duplicate = true;
+            });
+
+            rl.on('close', function() {
+                if (duplicate == false)
+                    fs.appendFileSync('./tmp.csv', elements+'\n');
+                else
+                    process.stdout.write('   DeDuped: ' + ++dupCount + " addresses\r");
+                linenum++;
+                rl.resume();
+            });
+        }
+    });
+
+    rl.on('close', function() {
+        fs.unlinkSync(loc);
+        var write = fs.createWriteStream(loc);
+
+        write.on('close', function() {
+            fs.unlinkSync('./tmp.csv');
+            callback();
+        });
+        
+        fs.createReadStream('./tmp.csv').pipe(write);
+    });
+
+};
 
 exports.none = function none(callback) {
     callback();
-}
+};
