@@ -160,8 +160,8 @@ function conformCache(){
             if (err) errorHandle(err);
 
             var csv = require('./Tools/csv');
-            csv.deDup(cacheDir + source.replace(".json", "") + "/out.csv",this);
-
+            //csv.deDup(cacheDir + source.replace(".json", "") + "/out.csv",this); //Not ready for production
+            csv.none(this);
         }, function(err) { //Start Next Download
             if (err) errorHandle(err);
             
