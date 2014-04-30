@@ -51,7 +51,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
                 }
             }
 
-            fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + parseInt(num) + ',' + str + '\n');
+            fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + parseInt(num.replace(/\D+/, '')) + ',' + str + '\n');
         }
 
         linenum++;
