@@ -156,3 +156,23 @@ exports.json2csv = function json2csv(file, callback) {
         callback();
     });
 }
+
+exports.csv = function csv(file, callback) {
+    var fs = require('fs');
+    
+    try {
+        fs.mkdirSync(file.replace(".csv", ""));
+    } catch(err) {
+        console.log("Folder Exists");
+        fs.unlinkSync(file.replace(".csv", "") + "/out.csv");
+    }
+    
+    var stream = fs.createReadStream(file);
+    
+    stream.on('close', function(){
+        callback();
+    });
+    
+    stream.pipe(fs.createWriteStream(file.replace(".csv", "") + "/out.csv"));
+};
+

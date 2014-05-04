@@ -4,54 +4,65 @@ exports.dropCol = function dropCol(keep, loc, callback){
         stream = require('stream');
 
     console.log("  Dropping Unnecessary Data");
-
+    
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
-  
+    
     var instream = fs.createReadStream(loc),
         outstream = new stream();
-
+    
     var rl = readline.createInterface(instream, outstream),
         keepArray = []; //Stores the column numbers to keep
-
+    
     var linenum = 1;
-
+    
     rl.on('line', function(line) {
         var elements = line.split(',');
-    
-        if (linenum == 1){
-            fs.appendFileSync('./tmp.csv', 'LON, LAT, NUMBER, STREET\n'); //Ready Output File
+        
+        if (linenum === 1){
+            fs.writeFileSync('./tmp.csv', 'LON, LAT, NUMBER, STREET\n'); //Ready Output File
             
             elements = elements.join('|').toLowerCase().split('|');
             keep = keep.join('|').toLowerCase().split('|');
       
-            keepArray.push('lon'); //X Must be first column
-            keepArray.push('lat'); //Y Must be 2nd column
+            //keepArray.push('lon'); //X Must be first column
+            //keepArray.push('lat'); //Y Must be 2nd column
       
-            for (var i = 2; i < elements.length; i++){
-                if (elements[i] == keep[2])
+            for (var i = 0; i < elements.length; i++){
+                if (elements[i] === keep[0])
+                    keepArray.push('lon');
+                else if (elements[i] === keep[1])
+                    keepArray.push('lat');
+                else if (elements[i] === keep[2])
                     keepArray.push('num');
-                else if (elements[i] == keep[3])
+                else if (elements[i] === keep[3])
                     keepArray.push('str');
                 else
                     keepArray.push('null');
-            } 
+            }
+            
         } else {
             var lon, lat, num, str;
       
             for (var i = 0; i < elements.length; i++){
-                if (keepArray[i] == 'lon') {
+                if (keepArray[i] === 'lon') {
                     lon = elements[i];
-                } else if (keepArray[i] == 'lat') {
+                } else if (keepArray[i] === 'lat') {
                     lat = elements[i];
-                } else if (keepArray[i] == 'num') { 
+                } else if (keepArray[i] === 'num') { 
                     num = elements[i];
-                } else if (keepArray[i] == 'str') {
+                } else if (keepArray[i] === 'str') {
                     str = elements[i];
                 }
             }
-
-            fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + parseInt(num.replace(/\D+/, '')) + ',' + str + '\n');
+            
+            try {
+                num = parseInt(num.replace(/\D+/, ''));
+            } catch (err) {
+                console.log("Number column has no number!");
+            }
+            
+            fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + num + ',' + str + '\n');
         }
 
         linenum++;
@@ -155,7 +166,7 @@ exports.expand = function expand(loc, callback) {
           
                 for (var i = 0; i < expand.abbr.length; i++) {
                     var key = expand.abbr[i].k;
-                    var value = expand.abbr[i].v
+                    var value = expand.abbr[i].v;
                     var tokenized = elements[3].split(' ');
             
                     for(var e = 0; e < tokenized.length; e++) {
@@ -220,7 +231,7 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         stream = require('stream');
   
     var instream = fs.createReadStream(loc),
-        outstream = new stream,
+        outstream = new stream(),
         rl = readline.createInterface(instream, outstream);
 
     var linenum = 1,
@@ -235,7 +246,7 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
             length = elements.length + 1; //Stores index of auto_num
       
             for (var i = 0; i < elements.length; i++){
-                col = col
+                col = col;
                 
                 if (col == elements[i].toLowerCase())
                 element = i;
@@ -282,7 +293,7 @@ exports.deDup = function deDup(loc, callback) {
         stream = require('stream');
         
     var instream = fs.createReadStream(loc),
-        outstream = new stream,
+        outstream = new stream(),
         rl = readline.createInterface(instream, outstream),
         linenum = 1;
 
@@ -295,7 +306,7 @@ exports.deDup = function deDup(loc, callback) {
             rl.pause();
 
             var tmpin = fs.createReadStream(loc),
-                tmpout = new stream,
+                tmpout = new stream(),
                 tmpLine = readline.createInterface(tmpin, tmpout),
                 tmpnum = 1,
                 duplicate = false,
@@ -309,7 +320,7 @@ exports.deDup = function deDup(loc, callback) {
             });
 
             rl.on('close', function() {
-                if (duplicate == false)
+                if (duplicate === false)
                     fs.appendFileSync('./tmp.csv', elements+'\n');
                 else
                     process.stdout.write('   DeDuped: ' + ++dupCount + " addresses\r");

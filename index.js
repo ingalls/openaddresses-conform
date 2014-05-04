@@ -75,10 +75,12 @@ function downloadCache(index) {
 
             showProgress(stream);
 
-            if (parsed.conform.type == "geojson")
+            if (parsed.conform.type === "geojson")
                 stream.pipe(fs.createWriteStream(cacheDir + source));
+            else if (parsed.conform.type === "csv")
+                stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".csv")));
             else
-                stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip")));
+                stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip"))); //This should replace with compression value not zip
         }
     } catch (err) {
         console.log("Malformed JSON!");
@@ -117,12 +119,14 @@ function conformCache(){
         function() { //Convert to CSV
             var convert = require('./Tools/convert');
 
-            if (parsed.conform.type == "shapefile")
+            if (parsed.conform.type === "shapefile")
                 convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
-            else if (parsed.conform.type == "shapefile-polygon")
+            else if (parsed.conform.type === "shapefile-polygon")
                 convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
-            else if (parsed.conform.type == "geojson")
+            else if (parsed.conform.type === "geojson")
                 convert.json2csv(cacheDir + source, this);
+            else if (parsed.conform.type === "csv")
+                convert.csv(cacheDir + source.replace(".json", ".csv"),this);
             else
                 downloadCache(++cacheIndex);
         }, function(err) { //Merge Columns
@@ -139,14 +143,14 @@ function conformCache(){
                 csv.none(this);
         }, function(err) { //Split Address Columns
             if (err) errorHandle(err);
-
+            
             if (parsed.conform.split)
                 csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", this);
             else
                 csv.none(this);
         }, function(err) { //Drop Columns
             if (err) errorHandle(err);
-
+            
             var csv = require('./Tools/csv');
             var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
             
