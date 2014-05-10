@@ -1,3 +1,4 @@
+/*jslint indent: 4, node: true */
 #!/usr/bin/env node
 
 //NPM Dependancies
@@ -10,15 +11,21 @@ var argv = require('minimist')(process.argv.slice(2)),
 
 //Command Line Args
 var sourceDir = argv._[0],
-    cacheDir = argv._[1];
+    cacheDir = argv._[1],
+    aws = false;
+
+if (argv._[2] === 'aws')
+    aws = true;
 
 var cacheIndex = 0,
     source = null,
     parsed;
 
 if (!sourceDir || !cacheDir) {
-    console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache>');
-    console.log('       openaddresses-conform  <single source>  <path-to-cache>');
+    console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache> <options>');
+    console.log('       openaddresses-conform  <single source>  <path-to-cache> <options>');
+    console.log('\nOptions:');
+    console.log('aws - If credentials are found automatically uploads to s3. Otherwise stored locally in out.csv');
     process.exit(0);
 }
 
@@ -135,7 +142,7 @@ function conformCache(){
             if (parsed.conform.test) //Stops at converting to find col names
                 process.exit(0);
             
-            csv = require('./Tools/csv');
+            var csv = require('./Tools/csv');
 
             if (parsed.conform.merge)
                 csv.mergeStreetName(parsed.conform.merge.slice(0),cacheDir + source.replace(".json", "") + "/out.csv",this);
@@ -143,6 +150,8 @@ function conformCache(){
                 csv.none(this);
         }, function(err) { //Split Address Columns
             if (err) errorHandle(err);
+            
+            var csv = require('./Tools/csv');
             
             if (parsed.conform.split)
                 csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", this);
@@ -171,7 +180,11 @@ function conformCache(){
             if (err) errorHandle(err);
             
             console.log("Complete");
-            updateCache();
+            
+            if (aws)
+                updateCache();
+            else 
+                downloadCache(++cacheIndex);
         }
     );
 
@@ -189,6 +202,7 @@ function updateManifest() {
 }
 
 function updateCache() {
+    
     parsed.processed = "http://s3.amazonaws.com/openaddresses/" + source.replace(".json", ".csv");
     
     console.log("  Updating s3 with " + source);
