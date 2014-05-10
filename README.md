@@ -10,11 +10,16 @@ A utility to download the openaddresses cache and wrangle them into a standardiz
 
 ## Run
 
-    node index.js <source-director> <working-directory>
+    node index.js <source-director> <working-directory> <options>
+                    <source.json>   <working-directory> <options>
     
 Where
 
-`<source-directory>` contains the directory of the openaddresses source files or a single openaddress source file ending in .json. 
+`<source-directory>` contains the directory of the openaddresses source files
+
+`<source.json>` is a single openaddresses source file.
+
+`<options>` If options is set to `aws` the script will conform and if credentials are found, upload to the openaddreses s3 bucket.
 
 `<working-directory>` is an empty directory to do processing
 
