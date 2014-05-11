@@ -100,12 +100,14 @@ function unzipCache() {
 
     console.log("  Starting Decompression");
 
-    if (!fs.existsSync(cacheDir + source.replace(".json","")))
-        fs.mkdirSync(cacheDir + source.replace(".json",""));
-    else {
+    var cacheSource = cacheDir + source.replace(".json", "");
+    if (fs.existsSync(cacheSource)) {
         console.log("  Folder Exists");
-        if (fs.existsSync(cacheDir + source.replace(".json","") + "/out.csv"))
-            fs.unlinkSync(cacheDir + source.replace(".json","") + "/out.csv");
+        if (fs.existsSync(cacheSource + "/out.csv"))
+            fs.unlinkSync(cacheSource + "/out.csv");
+        return conformCache();
+    } else {
+        fs.mkdirSync(cacheDir + source.replace(".json",""));
     }
     
     var read = fs.createReadStream(cacheDir + source.replace(".json", ".zip")),
