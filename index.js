@@ -71,8 +71,15 @@ function downloadCache(index) {
         } else {
             console.log("Processing: " + source);
 
-            var stream = request(parsed.cache);
-
+            // skip download if the cache has already been downloaded
+            var sourceFile = parsed.cache.split('/');
+            sourceFile = sourceFile[sourceFile.length-1];
+            if (!fs.existsSync(cacheDir + sourceFile)) {
+                var stream = request(parsed.cache);
+            } else {
+                console.log("Cache exists, skipping download");
+                var stream = fs.createReadStream(cacheDir + sourceFile);
+            }
             showProgress(stream);
 
             if (parsed.conform.type === "geojson")
@@ -102,7 +109,7 @@ function unzipCache() {
     }
     
     var read = fs.createReadStream(cacheDir + source.replace(".json", ".zip")),
-        write = fstream.Writer(cacheDir + source.replace(".json","") + "/");
+        write = fstream.Writer(cacheDir + source.replace(".json","/"));
 
     write.on('close', function() {
         console.log("  Finished Decompression"); //Daisy, Daisy...
