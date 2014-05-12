@@ -863,6 +863,14 @@
     {
         "k": "sw",
         "v": "southwest"
+    },
+    {
+        "k": "rge",
+        "v": "range"
+    },
+    {
+        "k": "twp",
+        "v": "township"
     }
   ]
 }
