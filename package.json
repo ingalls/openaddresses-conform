@@ -14,7 +14,10 @@
     "type": "git",
     "url": "https://github.com/openaddresses/openaddress-conform.git"
   },
-  "author": "",
+  "bin": {
+    "openaddresses-conform": "./index.js"
+  }
+  "author": "Nick Ingalls",
   "license": "PD",
   "dependencies": {
     "minimist": "0.0.8",
