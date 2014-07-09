@@ -16,7 +16,7 @@
   },
   "bin": {
     "openaddresses-conform": "./index.js"
-  }
+  },
   "author": "Nick Ingalls",
   "license": "PD",
   "dependencies": {
