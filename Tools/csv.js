@@ -56,12 +56,6 @@ exports.dropCol = function dropCol(keep, loc, callback){
                 }
             }
             
-            try {
-                num = parseInt(num.replace(/\D+/, ''));
-            } catch (err) {
-                console.log("Number column has no number!");
-            }
-            
             fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + num + ',' + str + '\n');
         }
 
