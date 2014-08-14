@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /*jslint indent: 4, node: true */
 
 //NPM Dependancies
