@@ -1,5 +1,4 @@
 /*jslint indent: 4, node: true */
-#!/usr/bin/env node
 
 //NPM Dependancies
 var argv = require('minimist')(process.argv.slice(2)),
@@ -225,7 +224,7 @@ function updateCache() {
 
         var s3 = new AWS.S3();
         
-        s3.client.putObject({
+        s3.putObject({
             Bucket: 'openaddresses',
             Key: source.replace(".json", ".csv"),
             Body: buffer,
