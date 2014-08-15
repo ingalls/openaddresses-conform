@@ -12,7 +12,7 @@ A utility to download the openaddresses cache and wrangle them into a standardiz
 
     node index.js <source-director> <working-directory> <options>
                     <source.json>   <working-directory> <options>
-    
+
 Where
 
 `<source-directory>` contains the directory of the openaddresses source files
@@ -44,6 +44,8 @@ Conform data can be found in the source files of the openaddresses project. Conf
 `number` The name of the number columm. This will either be the name of the column or `auto_number` if the split tool was used.
 
 `street` The name of the street column. This will either be the name of the column or `auto_street` if the split or merge tools were used.
+
+`srs` Allows one to set a custom source srs. Currently only supported by `type:shapefile` and `type:shapefile-polygon`. Shoud be in the formt of `EPSG:####` and can be any code supported by `ogr2ogr`.
 
 `file` The majority of zips contain a single shapefile. Sometimes zips will contain multiple files, or the shapefile that is needed is located in a folder
 hierarchy in the zip. Since the program only supports determining single shapefiles not in a subfolder, file can be used to point the program to an exact file.
