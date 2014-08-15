@@ -1,13 +1,13 @@
-exports.polyshp2csv = function polyshp2csv(dir, shp, callback) {
+exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
     var sh = require('execSync'),
         fs = require('fs'),
         geojson = require('geojson-stream');
-        
+
     if (!shp) {
         console.log('  Detecting Shapefile');
         var tmp = fs.readdirSync(dir);
         var shp;
-        
+
         for(var i = 0; i < tmp.length; i++){
             if (tmp[i].indexOf(".shp") != -1){
                 shp = tmp[i];
@@ -18,8 +18,8 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, callback) {
     }
 
     console.log('  Converting ' + shp);
-    sh.run('ogr2ogr -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
-    
+    sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
+
     var start = true;
     var stream = fs.createReadStream(dir + 'tmp.json').pipe(geojson.parse());
     var headers = "X,Y,";
@@ -51,7 +51,7 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, callback) {
                     row[0] = data.geometry.coordinates[0];
                     row[1] = data.geometry.coordinates[1];
                 }
-                
+
                 for (var elem in data.properties) {
                     if (headers.indexOf(elem) != -1 && data.properties[elem])
                         row[headers.indexOf(elem)] = data.properties[elem].toString().replace(/\s*,\s*/g, ' ').replace(/(\r\n|\n|\r)/gm,"");
@@ -70,7 +70,7 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, callback) {
     });
 }
 
-exports.shp2csv = function shp2csv(dir, shp, callback) {
+exports.shp2csv = function shp2csv(dir, shp, s_srs, callback) {
     var sh = require('execSync'),
         fs = require('fs');
 
@@ -78,7 +78,7 @@ exports.shp2csv = function shp2csv(dir, shp, callback) {
         console.log('  Detecting Shapefile');
         var tmp = fs.readdirSync(dir);
         var shp;
-        
+
         for(var i = 0; i < tmp.length; i++){
             if (tmp[i].indexOf(".shp") != -1){
                 shp = tmp[i];
@@ -87,10 +87,10 @@ exports.shp2csv = function shp2csv(dir, shp, callback) {
             }
         }
     }
-    
+
     console.log('  Converting ' + shp);
-    sh.run('ogr2ogr -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
-    
+    sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
+
     callback();
 }
 
@@ -110,7 +110,7 @@ exports.json2csv = function json2csv(file, callback) {
     stream.on('data', function(data){
         if (data.properties.x) delete data.properties.x;
         if (data.properties.y) delete data.properties.y;
-    
+
         if (start) { //Headers
             headers = headers + Object.keys(data.properties).join(',');
             start = false;
@@ -141,7 +141,7 @@ exports.json2csv = function json2csv(file, callback) {
                     row[0] = data.geometry.coordinates[0];
                     row[1] = data.geometry.coordinates[1];
                 }
-                
+
                 for (var elem in data.properties) {
                     if (headers.indexOf(elem) != -1 && data.properties[elem])
                         row[headers.indexOf(elem)] = data.properties[elem].toString().replace(/\s*,\s*/g, ' ').replace(/(\r\n|\n|\r)/gm,"");
@@ -162,20 +162,20 @@ exports.json2csv = function json2csv(file, callback) {
 
 exports.csv = function csv(file, callback) {
     var fs = require('fs');
-    
+
     try {
         fs.mkdirSync(file.replace(".csv", ""));
     } catch(err) {
         console.log("Folder Exists");
         fs.unlinkSync(file.replace(".csv", "") + "/out.csv");
     }
-    
+
     var stream = fs.createReadStream(file);
-    
+
     stream.on('close', function(){
         callback();
     });
-    
+
     stream.pipe(fs.createWriteStream(file.replace(".csv", "") + "/out.csv"));
 };
 

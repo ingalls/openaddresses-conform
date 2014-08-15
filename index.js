@@ -39,7 +39,7 @@ if (sourceDir.indexOf(".json") != -1) {
         singleSource = dir[dir.length-1];
 
     sourceDir = sourceDir.replace(singleSource,"");
-    
+
     sources.push(singleSource);
 } else {
     //Catch missing /
@@ -116,7 +116,7 @@ function unzipCache() {
     } else {
         fs.mkdirSync(cacheDir + source.replace(".json",""));
     }
-    
+
     var read = fs.createReadStream(cacheDir + source.replace(".json", ".zip")),
         write = fstream.Writer(cacheDir + source.replace(".json","/"));
 
@@ -135,10 +135,12 @@ function conformCache(){
         function() { //Convert to CSV
             var convert = require('./Tools/convert');
 
+            var s_srs = parsed.conform.srs ? parsed.conform.srs : "EPSG:4326"
+
             if (parsed.conform.type === "shapefile")
-                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
+                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this);
             else if (parsed.conform.type === "shapefile-polygon")
-                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, this);
+                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this);
             else if (parsed.conform.type === "geojson")
                 convert.json2csv(cacheDir + source, this);
             else if (parsed.conform.type === "csv")
@@ -150,7 +152,7 @@ function conformCache(){
 
             if (parsed.conform.test) //Stops at converting to find col names
                 process.exit(0);
-            
+
             var csv = require('./Tools/csv');
 
             if (parsed.conform.merge)
@@ -159,40 +161,40 @@ function conformCache(){
                 csv.none(this);
         }, function(err) { //Split Address Columns
             if (err) errorHandle(err);
-            
+
             var csv = require('./Tools/csv');
-            
+
             if (parsed.conform.split)
                 csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", this);
             else
                 csv.none(this);
         }, function(err) { //Drop Columns
             if (err) errorHandle(err);
-            
+
             var csv = require('./Tools/csv');
             var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
-            
+
             csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", this);
         }, function(err) { //Expand Abbreviations, Fix Capitalization & drop null rows
             if (err) errorHandle(err);
-            
+
             var csv = require('./Tools/csv');
-            
+
             csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", this);
         }, function(err) {
             if (err) errorHandle(err);
-            
+
             var csv = require('./Tools/csv');
             //csv.deDup(cacheDir + source.replace(".json", "") + "/out.csv",this); //Not ready for production
             csv.none(this);
         }, function(err) { //Start Next Download
             if (err) errorHandle(err);
-            
+
             console.log("Complete");
-            
+
             if (aws)
                 updateCache();
-            else 
+            else
                 downloadCache(++cacheIndex);
         }
     );
@@ -211,20 +213,20 @@ function updateManifest() {
 }
 
 function updateCache() {
-    
+
     parsed.processed = "http://s3.amazonaws.com/openaddresses/" + source.replace(".json", ".csv");
-    
+
     console.log("  Updating s3 with " + source);
-    
+
     var s3 = new AWS.S3();
     fs.readFile(cacheDir + source.replace(".json", "") + "/out.csv", function (err, data) {
         if (err)
-            throw new Error('Could not find data to upload'); 
-        
+            throw new Error('Could not find data to upload');
+
         var buffer = new Buffer(data, 'binary');
 
         var s3 = new AWS.S3();
-        
+
         s3.putObject({
             Bucket: 'openaddresses',
             Key: source.replace(".json", ".csv"),
