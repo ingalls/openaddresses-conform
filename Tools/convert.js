@@ -108,6 +108,9 @@ exports.json2csv = function json2csv(file, callback) {
     var headers = "X,Y,";
 
     stream.on('data', function(data){
+        if (data.properties.x) delete data.properties.x;
+        if (data.properties.y) delete data.properties.y;
+    
         if (start) { //Headers
             headers = headers + Object.keys(data.properties).join(',');
             start = false;
