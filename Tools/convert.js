@@ -18,7 +18,10 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
     }
 
     console.log('  Converting ' + shp);
-    sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
+    if (s_srs)
+        sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
+    else
+        sh.run('ogr2ogr -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
 
     var start = true;
     var stream = fs.createReadStream(dir + 'tmp.json').pipe(geojson.parse());
@@ -89,7 +92,10 @@ exports.shp2csv = function shp2csv(dir, shp, s_srs, callback) {
     }
 
     console.log('  Converting ' + shp);
-    sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
+    if (s_srs)
+        sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
+    else
+        sh.run('ogr2ogr -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
 
     callback();
 }

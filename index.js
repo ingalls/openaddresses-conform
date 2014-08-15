@@ -135,7 +135,7 @@ function conformCache(){
         function() { //Convert to CSV
             var convert = require('./Tools/convert');
 
-            var s_srs = parsed.conform.srs ? parsed.conform.srs : "EPSG:4326"
+            var s_srs = parsed.conform.srs ? parsed.conform.srs : false;
 
             if (parsed.conform.type === "shapefile")
                 convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this);
