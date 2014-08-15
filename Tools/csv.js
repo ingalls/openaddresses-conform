@@ -189,6 +189,7 @@ exports.expand = function expand(loc, callback) {
 
                 elements[3] = tokenized.join(" ");
                 elements[3] = elements[3].toLowerCase().replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
+                elements[3] = elements[3].trim();
           
                 fs.appendFileSync('./tmp.csv', elements+'\n');
             }
