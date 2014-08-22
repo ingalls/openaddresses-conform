@@ -150,11 +150,12 @@ exports.expand = function expand(loc, callback) {
         if (linenum == 1) {
             fs.writeFileSync('./tmp.csv', elements+'\n'); //Write Headers
         } else {
-            if (elements[0] !=="NaN" && elements[1] !=="NaN" && elements[2] !== "NaN" && elements[3]) {
+            if (elements[0] !=="NaN" && elements[1] !=="NaN" && elements[2] !== "NaN" && elements[3] && elements[3].trim() !== "") {
                 
                 elements[3] = elements[3].toLowerCase();
                 elements[3] = elements[3].replace(/\./g,'');
-      
+                elements[2] = elements[2].trim();
+
                 if (linenum % 10000 === 0)
                     console.log('  Processed Addresses: ' + linenum);
           

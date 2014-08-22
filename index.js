@@ -97,6 +97,7 @@ function downloadCache(index) {
                 stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip"))); //This should replace with compression value not zip
         }
     } catch (err) {
+        console.log(err);
         console.log("Malformed JSON!");
         downloadCache(++index);
     }
