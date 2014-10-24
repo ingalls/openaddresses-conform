@@ -90,11 +90,15 @@ function downloadCache(index) {
             showProgress(stream);
 
             if (parsed.conform.type === "geojson")
-                stream.pipe(fs.createWriteStream(cacheDir + source));
+                var cache_path = cacheDir + source;
             else if (parsed.conform.type === "csv")
-                stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".csv")));
+                var cache_path = cacheDir + source.replace(".json", ".csv");
             else
-                stream.pipe(fs.createWriteStream(cacheDir + source.replace(".json", ".zip"))); //This should replace with compression value not zip
+                var cache_path = cacheDir + source.replace(".json", ".zip"); //This should replace with compression value not zip
+
+            // Write the stream to the cacheDir only if it's not already there.
+            if(cache_path != stream.path)
+                stream.pipe(fs.createWriteStream(cache_path));
         }
     } catch (err) {
         console.log(err);
