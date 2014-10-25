@@ -51,8 +51,8 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
 
                     row = center(data.geometry.coordinates[0]);
                 } else { //Handle Points
-                    row[0] = data.geometry.coordinates[0];
-                    row[1] = data.geometry.coordinates[1];
+                    row[0] = data.geometry.coordinates[0].toFixed(6);
+                    row[1] = data.geometry.coordinates[1].toFixed(6);
                 }
 
                 for (var elem in data.properties) {
@@ -144,8 +144,8 @@ exports.json2csv = function json2csv(file, callback) {
 
                     row = center(data.geometry.coordinates[0]);
                 } else { //Handle Points
-                    row[0] = data.geometry.coordinates[0];
-                    row[1] = data.geometry.coordinates[1];
+                    row[0] = data.geometry.coordinates[0].toFixed(6);
+                    row[1] = data.geometry.coordinates[1].toFixed(6);
                 }
 
                 for (var elem in data.properties) {
