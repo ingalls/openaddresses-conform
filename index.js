@@ -12,13 +12,13 @@ var argv = require('minimist')(process.argv.slice(2)),
 //Command Line Args
 var sourceDir = argv._[0],
     cacheDir = argv._[1],
-    bucketName = 'openaddresses',
+    bucketName = undefined,
     aws = false;
 
 if (argv._.length == 3)
 {
     aws = true;
-    bucketName = (argv._[2] == 'aws' ? bucketName : argv._[2]);
+    bucketName = (argv._[2] == 'aws' ? 'openaddresses' : argv._[2]);
 }
 
 var cacheIndex = 0,
