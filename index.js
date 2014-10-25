@@ -12,10 +12,14 @@ var argv = require('minimist')(process.argv.slice(2)),
 //Command Line Args
 var sourceDir = argv._[0],
     cacheDir = argv._[1],
+    bucketName = 'openaddresses',
     aws = false;
 
-if (argv._[2] === 'aws')
+if (argv._.length == 3)
+{
     aws = true;
+    bucketName = (argv._[2] == 'aws' ? bucketName : argv._[2]);
+}
 
 var cacheIndex = 0,
     source = null,
@@ -25,7 +29,7 @@ if (!sourceDir || !cacheDir) {
     console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache> <options>');
     console.log('       openaddresses-conform  <single source>  <path-to-cache> <options>');
     console.log('\nOptions:');
-    console.log('aws - If credentials are found automatically uploads to s3. Otherwise stored locally in out.csv');
+    console.log('bucket name - If credentials are found automatically uploads to this s3 bucket. Otherwise stored locally in out.csv');
     process.exit(0);
 }
 
@@ -219,7 +223,7 @@ function updateManifest() {
 
 function updateCache() {
 
-    parsed.processed = "http://s3.amazonaws.com/openaddresses/" + source.replace(".json", ".csv");
+    parsed.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.replace(".json", ".csv");
 
     console.log("  Updating s3 with " + source);
 
@@ -233,7 +237,7 @@ function updateCache() {
         var s3 = new AWS.S3();
 
         s3.putObject({
-            Bucket: 'openaddresses',
+            Bucket: bucketName,
             Key: source.replace(".json", ".csv"),
             Body: buffer,
             ACL: 'public-read'
