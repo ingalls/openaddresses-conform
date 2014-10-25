@@ -20,7 +20,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
         var elements = line.split(',');
         
         if (linenum === 1){
-            fs.writeFileSync('./tmp.csv', 'LON, LAT, NUMBER, STREET\n'); //Ready Output File
+            fs.writeFileSync('./tmp.csv', 'LON,LAT,NUMBER,STREET\n'); //Ready Output File
             
             elements = elements.join('|').toLowerCase().split('|');
             keep = keep.join('|').toLowerCase().split('|');
@@ -46,9 +46,9 @@ exports.dropCol = function dropCol(keep, loc, callback){
       
             for (var i = 0; i < elements.length; i++){
                 if (keepArray[i] === 'lon') {
-                    lon = elements[i];
+                    lon = parseFloat(elements[i]).toFixed(6);
                 } else if (keepArray[i] === 'lat') {
-                    lat = elements[i];
+                    lat = parseFloat(elements[i]).toFixed(6);
                 } else if (keepArray[i] === 'num') { 
                     num = elements[i];
                 } else if (keepArray[i] === 'str') {
