@@ -19,7 +19,7 @@ Where
 
 `<source.json>` is a single openaddresses source file.
 
-`<options>` If options is set to `aws` the script will conform and if credentials are found, upload to the openaddreses s3 bucket.
+`<options>` If AWS credentials are found automatically uploads to this named s3 bucket.
 
 `<working-directory>` is an empty directory to do processing
 
