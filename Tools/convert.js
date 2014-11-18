@@ -1,23 +1,27 @@
+var fs = require('fs');
+var async = require('async');
+
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
+    var debug = require('debug')('conform:polyshp2csv');
+
     var sh = require('execSync'),
-        fs = require('fs'),
         geojson = require('geojson-stream');
 
     if (!shp) {
-        console.log('  Detecting Shapefile');
+        debug('Detecting Shapefile');
         var tmp = fs.readdirSync(dir);
         var shp;
 
         for(var i = 0; i < tmp.length; i++){
             if (tmp[i].indexOf(".shp") != -1){
                 shp = tmp[i];
-                console.log('  Found: ' + shp);
+                debug('Found: ' + shp);
                 break;
             }
         }
     }
 
-    console.log('  Converting ' + shp);
+    debug('Converting ' + shp);
     if (s_srs)
         sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
     else
@@ -63,7 +67,7 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
                 }
                 fs.appendFileSync(dir + "/out.csv", row + "\n");
             } catch (err) {
-                console.log("  Malformed data package");
+                debug("Malformed data package");
             }
         }
     });
@@ -74,11 +78,11 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
 }
 
 exports.shp2csv = function shp2csv(dir, shp, s_srs, callback) {
-    var sh = require('execSync'),
-        fs = require('fs');
+    var sh = require('execSync');
+    var debug = require('debug')('conform:shp2csv');
 
     if (!shp) {
-        console.log('  Detecting Shapefile');
+        debug('Detecting Shapefile');
         var tmp = fs.readdirSync(dir);
         var shp;
 
@@ -91,7 +95,7 @@ exports.shp2csv = function shp2csv(dir, shp, s_srs, callback) {
         }
     }
 
-    console.log('  Converting ' + shp);
+    debug('Converting ' + shp);
     if (s_srs)
         sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
     else
@@ -101,8 +105,8 @@ exports.shp2csv = function shp2csv(dir, shp, s_srs, callback) {
 }
 
 exports.json2csv = function json2csv(file, callback) {
-    var geojson = require('geojson-stream'),
-        fs = require('fs');
+    var debug = require('debug')('conform:json2csv'),
+        geojson = require('geojson-stream');
 
     var start = true;
 
@@ -123,7 +127,7 @@ exports.json2csv = function json2csv(file, callback) {
             try {
                 fs.mkdirSync(file.replace(".json",""));
             } catch(err) {
-                console.log("  Folder Exists");
+                debug("Folder Exists");
             }
             fs.writeFileSync(file.replace(".json","") + "/out.csv", headers + "\n");
             headers = headers.split(',');
@@ -156,7 +160,7 @@ exports.json2csv = function json2csv(file, callback) {
                 }
                 fs.appendFileSync(file.replace(".json","") + "/out.csv", row + "\n");
             } catch (err) {
-                console.log("  Malformed data package");
+                debug("Malformed data package");
             }
         }
     });
@@ -166,22 +170,23 @@ exports.json2csv = function json2csv(file, callback) {
     });
 }
 
-exports.csv = function csv(file, callback) {
-    var fs = require('fs');
+exports.csv = function csv(source, cachedir, extension, callback) {
+    var debug = require('debug')('conform:csv');
 
-    try {
-        fs.mkdirSync(file.replace(".csv", ""));
-    } catch(err) {
-        console.log("Folder Exists");
-        fs.unlinkSync(file.replace(".csv", "") + "/out.csv");
-    }
+    var directory = cachedir + source.id; // eg /tmp/openaddresses/us-va-arlington
+    filename = directory + '.' + extension; // eg /tmp/openaddresses/us-va-arlington.csv
 
-    var stream = fs.createReadStream(file);
-
-    stream.on('close', function(){
-        callback();
+    async.series([        
+        function(cb) {
+            fs.mkdir(directory, cb);
+        },
+        function(cb) {
+            fs.unlink(directory + '/out.csv', cb);
+        }
+    ], function(err, results) {
+        var stream = fs.createReadStream(filename);
+        stream.on('close', callback);
+        stream.pipe(fs.createWriteStream(directory + '/out.csv'));
     });
-
-    stream.pipe(fs.createWriteStream(file.replace(".csv", "") + "/out.csv"));
 };
 

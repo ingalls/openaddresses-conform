@@ -1,234 +1,344 @@
 #!/usr/bin/env node
 /*jslint indent: 4, node: true */
 
-//NPM Dependancies
 var argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
+    path = require('path'),
     ProgressBar = require('progress'),
     unzip = require('unzip'),
     request = require('request'),
-    AWS = require('aws-sdk');
+    AWS = require('aws-sdk'),    
+    async = require('async');
 
-//Command Line Args
-var sourceDir = argv._[0],
-    cacheDir = argv._[1],
-    bucketName = undefined,
-    aws = false;
 
-if (argv._.length == 3)
-{
-    aws = true;
-    bucketName = (argv._[2] == 'aws' ? 'openaddresses' : argv._[2]);
+var fileTypeExtensions = {
+    'shapefile': 'shp',
+    'shapefile-polygon': 'shp',
+    'geojson': 'json',
+    'csv': 'csv'
+};
+
+var uploadToAWS = false;
+
+function isShapefileExtension(ext) {
+    // ensure ext begins with a . ('.txt' not 'txt') 
+    // and is not multipart ('.gz' not '.tar.gz')
+    var e = ext.split('.');
+    ext = e[e.length-1];
+    if(ext[0]!=='.') ext = '.' + ext;
+    
+    return (['.shp', '.shx', '.dbf', '.prj', '.sbn', '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs', '.mxs', '.atx', '.xml', '.cpg', '.qix'].indexOf(ext) > -1);
 }
 
-var cacheIndex = 0,
-    source = null,
-    parsed;
-
-if (!sourceDir || !cacheDir) {
-    console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache> <options>');
-    console.log('       openaddresses-conform  <single source>  <path-to-cache> <options>');
-    console.log('\nOptions:');
-    console.log('bucket name - If credentials are found automatically uploads to this s3 bucket. Otherwise stored locally in out.csv');
-    process.exit(0);
-}
-
-if (cacheDir.substr(cacheDir.length-1) != "/")
-    cacheDir = cacheDir + "/";
-
-var sources = [];
-
-if (sourceDir.indexOf(".json") != -1) {
-    var dir = sourceDir.split("/"),
-        singleSource = dir[dir.length-1];
-
-    sourceDir = sourceDir.replace(singleSource,"");
-
-    sources.push(singleSource);
-} else {
-    //Catch missing /
-    if (sourceDir.substr(sourceDir.length-1) != "/")
-        sourceDir = sourceDir + "/";
-
-    //Setup list of sources
-    sources = fs.readdirSync(sourceDir);
-
-    //Only retain *.json
-    for (var i = 0; i < sources.length; i++) {
-        if (sources[i].indexOf('.json') == -1) {
-            sources.splice(i, 1);
-            i--;
-        }
+function cachedFileLocation(source, cachedir){
+    if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
+    if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
+        return cachedir + source.id + '/' + source.id + '.' + fileTypeExtensions[source.conform.type];
+    }
+    else {
+        return cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
     }
 }
 
-//Begin Downloading Sources
-downloadCache(cacheIndex);
+function ConformCLI(){
+    require('debug').enable('conform:*');
 
-function downloadCache(index) {
-    if (index >= sources.length) {
-        console.log("Complete!");
+    //Command Line Args
+    var sourcedir = argv._[0],
+        cachedir = argv._[1],
+        bucketName = undefined,
+        uploadToAWS = false;
+
+    if (argv._.length == 3)
+    {
+        uploadToAWS = true;
+        bucketName = (argv._[2] == 'aws' ? 'openaddresses' : argv._[2]);
+    }
+
+    var cacheIndex = 0,
+        source = null,
+        parsed;
+
+    if (!sourcedir || !cachedir) {
+        console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache> <options>');
+        console.log('       openaddresses-conform  <single source>  <path-to-cache> <options>');
+        console.log('\nOptions:');
+        console.log('bucket name - If credentials are found automatically uploads to this s3 bucket. Otherwise stored locally in out.csv');
         process.exit(0);
     }
 
-    source = sources[index];
+    if (cachedir.substr(cachedir.length-1) != "/")
+        cachedir = cachedir + "/";
 
-    try {
-        parsed = JSON.parse(fs.readFileSync(sourceDir + source, 'utf8'));
+    var sources = [];
 
-        if (!parsed.cache || parsed.skip === true || !parsed.conform) {
-            console.log("Skipping: " + source);
-            downloadCache(++cacheIndex);
-        } else {
-            console.log("Processing: " + source);
+    if (sourcedir.indexOf(".json") != -1) {    
+        sources.push(sourcedir);
+    } else {
+        // Catch missing /
+        if (sourcedir.substr(sourcedir.length-1) != "/")
+            sourcedir = sourcedir + "/";
 
-            // skip download if the cache has already been downloaded
-            var sourceFile = parsed.cache.split('/');
-            sourceFile = sourceFile[sourceFile.length-1];
-            if (!fs.existsSync(cacheDir + sourceFile)) {
-                var stream = request(parsed.cache);
-            } else {
-                console.log("Cache exists, skipping download");
-                var stream = fs.createReadStream(cacheDir + sourceFile);
+        // Setup list of sources
+        sources = fs.readdirSync(sourcedir);
+
+        // Only retain *.json
+        for (var i = 0; i < sources.length; i++) {
+            if (sources[i].indexOf('.json') == -1) {
+                sources.splice(i, 1);
+                i--;
             }
-            showProgress(stream);
-
-            if (parsed.conform.type === "geojson")
-                var cache_path = cacheDir + source;
-            else if (parsed.conform.type === "csv")
-                var cache_path = cacheDir + source.replace(".json", ".csv");
-            else
-                var cache_path = cacheDir + source.replace(".json", ".zip"); //This should replace with compression value not zip
-
-            // Write the stream to the cacheDir only if it's not already there.
-            if(cache_path != stream.path)
-                stream.pipe(fs.createWriteStream(cache_path));
         }
-    } catch (err) {
-        console.log(err);
-        console.log("Malformed JSON!");
-        downloadCache(++index);
     }
+
+    main(sources, cachedir);
 }
 
-function unzipCache() {
-    var fstream = require('fstream');
+function loadSource(sourcefile) {    
+    var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
+    source.id = path.basename(sourcefile, '.json');
+    return source;
+}
 
-    console.log("  Starting Decompression");
-
-    var cacheSource = cacheDir + source.replace(".json", "");
-    if (fs.existsSync(cacheSource)) {
-        console.log("  Folder Exists");
-        if (fs.existsSync(cacheSource + "/out.csv"))
-            fs.unlinkSync(cacheSource + "/out.csv");
-        return conformCache();
-    } else {
-        fs.mkdirSync(cacheDir + source.replace(".json",""));
-    }
-
-    var read = fs.createReadStream(cacheDir + source.replace(".json", ".zip")),
-        write = fstream.Writer(cacheDir + source.replace(".json","/"));
-
-    write.on('close', function() {
-        console.log("  Finished Decompression"); //Daisy, Daisy...
-        conformCache();
+function main(sources, cachedir)
+{
+    var debug = require('debug')('conform:main');
+    
+    var failedSources = {};
+    var toDoList = [];
+    
+    sources.forEach(function(sourceFile, i) {
+        source = loadSource(sourceFile);
+        toDoList.push(function(cb) {            
+            processSource(source, cachedir, function(err, results) {
+                // mark sources as failed if an error occurred
+                if(err) failedSources[source.id] = err;
+                // but don't pass through errors -- we want to process all sources                
+                cb(null); 
+            });
+        }); 
     });
 
-    read.pipe(unzip.Parse()).pipe(write);
+    var done = function(err, results) {        
+        if (failedSources.length > 0) {
+            debug('Done with failure on the following sources:');
+            Object.keys(failedSources).forEach(function(failure) { debug(failure + ': ' + failedSources[failure].toString()); });
+        }
+        else {
+            debug('Done with no errors');
+        }
+        process.exit(0);
+    }
+
+    async.series(toDoList, done);
 }
 
-function conformCache(){
-    var flow = require('flow');
+function processSource(source, cachedir, callback) {    
+    var tasks = [];
+    var debug = require('debug')('conform:processSource');
+    tasks.push(function(cb) {
+        downloadCache(source, cachedir, cb);
+    });
+    tasks.push(function(cb) {          
+        conformCache(source, cachedir, cb);
+    });
+    async.series(tasks, callback);;
+}
 
-    flow.exec(
-        function() { //Convert to CSV
+function downloadCache(source, cachedir, callback) {    
+    var debug = require('debug')('conform:downloadCache');    
+
+    if ((!source.cache) || (source.skip === true) || (!source.conform)) {
+        debug("Skipping: " + source.id);
+        callback(null);
+    } else {
+        debug("Processing: " + source.id);
+
+        // add trailing slash if it's missing
+        if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
+
+        // skip download if the cache has already been downloaded            
+        var sourceFile = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
+        if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
+            debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
+            var stream = request(source.cache);
+
+            var bar;
+            if(debug.enabled) {
+                stream
+                    .on('response', function(res) {
+                        var len = parseInt(res.headers['content-length'], 10);
+                        bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
+                            complete: '=',
+                            incomplete: '-',
+                            width: 20,
+                            total: len
+                        });
+                    })
+                    .on('data', function(chunk) {
+                        if (bar) bar.tick(chunk.length);
+                    });
+            }
+            stream.on('end', function() {
+                    if (source.compression)
+                        unzipCache(source, cachedir, callback);
+                    else
+                        callback();
+                });
+
+            var downloadDestination = cachedir + source.id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
+            stream.pipe(fs.createWriteStream(downloadDestination));
+
+        } else {
+            debug("Cached file exists, skipping download");
+            callback();
+        }
+    }
+}
+
+function unzipCache(source, cachedir, callback) {
+    var fstream = require('fstream');
+    var debug = require('debug')('conform:unzipCache');
+
+    if (['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
+        if (!fs.existsSync(cachedir + source.id)) {
+            debug('creating directory for shapefile')
+            fs.mkdirSync(cachedir + source.id);
+        }
+    } 
+    
+    debug("Starting decompression to " + cachedir);
+
+    var readStreamSource = cachedir + source.id + '.' + source.compression;
+    var read = fs.createReadStream(readStreamSource);            
+
+    var q = async.queue(function(task, qcallback) {        
+        task.entry.pipe(fs.createWriteStream(task.outpath).on('finish', qcallback));
+    }, 10);
+
+    // track the number of output files we encounter. if >1, our path scheme is not gonna work
+    matchingFiles = [];    
+    read
+        .pipe(unzip.Parse())
+        .on('entry', function(entry){
+
+            var extension = path.extname(entry.path);            
+
+            var entryExistsWithinSourceFilePath = source.conform.file && (entry.path.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
+
+            // ## skip directories entirely
+            if (entry.type === 'Directory') {
+                entry.autodrain();
+            }            
+            // ## CSV/JSON
+            // IF NOT source.conform.file, take first JSON/CSV, error on multiple
+            // IF source.conform.file, only take correct path
+            else if ((['.json', '.geojson', '.csv'].indexOf(extension) > -1) && (!source.conform.file || (source.conform.file && (source.conform.file===entry.path)))) {
+                debug('queueing ' + entry.path + ' for decompression');
+
+                if(!source.conform.file) {
+                    matchingFiles.push(entry.path);
+                    if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
+                }
+
+                var outpath = cachedir + source.id + '.' + source.conform.type;
+                q.push({entry: entry, outpath: outpath});
+            }
+            // ## Shapefile
+            // IF NOT source.conform.file, take first shapefile, error on multiple
+            // check if entry is party of specific shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
+            else if (isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
+                debug('queueing ' + entry.path + ' for decompression');
+
+                if(!source.conform.file && (extension === '.shp')) {
+                    matchingFiles.push(entry.path);
+                    if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
+                }
+            
+                var outpath = cachedir + source.id + '/' + source.id + extension;
+                q.push({entry: entry, outpath: outpath});             
+            }
+            else {
+                // save ourselves some memory
+                entry.autodrain();
+            }
+        })
+        .on('finish', function() {
+            debug('Decompression complete');
+            callback();
+        });
+}
+
+function conformCache(source, cachedir, callback){
+    
+    var debug = require('debug')('conform:conformCache');
+    var csv = require('./Tools/csv');
+
+    async.series([
+        function(cb) { //Convert to CSV
             var convert = require('./Tools/convert');
 
-            var s_srs = parsed.conform.srs ? parsed.conform.srs : false;
+            var s_srs = source.conform.srs ? source.conform.srs : false;
 
-            if (parsed.conform.type === "shapefile")
-                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this);
-            else if (parsed.conform.type === "shapefile-polygon")
-                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this);
-            else if (parsed.conform.type === "geojson")
-                convert.json2csv(cacheDir + source, this);
-            else if (parsed.conform.type === "csv")
-                convert.csv(cacheDir + source.replace(".json", ".csv"),this);
+            if (source.conform.type === "shapefile")
+                convert.shp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
+            else if (source.conform.type === "shapefile-polygon")
+                convert.polyshp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
+            else if (source.conform.type === "geojson")
+                convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
+            else if (source.conform.type === "csv") {
+                convert.csv(source, cachedir, fileTypeExtensions[source.conform.type], cb);
+            } 
             else
-                downloadCache(++cacheIndex);
-        }, function(err) { //Merge Columns
-            if (err) errorHandle(err);
-
-            if (parsed.conform.test) //Stops at converting to find col names
+                cb();                
+        },         
+        function(cb) { //Merge Columns
+            if (source.conform.test) //Stops at converting to find col names
                 process.exit(0);
-
-            var csv = require('./Tools/csv');
-
-            if (parsed.conform.merge)
-                csv.mergeStreetName(parsed.conform.merge.slice(0),cacheDir + source.replace(".json", "") + "/out.csv",this);
+            if (source.conform.merge)
+                csv.mergeStreetName(source.conform.merge.slice(0), cachedir + source.id + "/out.csv", cb);
             else
-                csv.none(this);
-        }, function(err) { //Split Address Columns
-            if (err) errorHandle(err);
-
+                cb();
+        }, function(cb) { //Split Address Columns            
             var csv = require('./Tools/csv');
-
-            if (parsed.conform.split)
-                csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", this);
+            if (source.conform.split)
+                csv.splitAddress(source.conform.split, 1, cachedir + source.id + "/out.csv", cb);
             else
-                csv.none(this);
-        }, function(err) { //Drop Columns
-            if (err) errorHandle(err);
+                cb();
+        }, function(cb) { //Drop Columns
+            var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
+            csv.dropCol(keep, cachedir + source.id + "/out.csv", cb);
+        }, function(cb) { //Expand Abbreviations, Fix Capitalization & drop null rows            
+            csv.expand(cachedir + source.id + "/out.csv", cb);
+        }], function(err, results) {
+            debug("complete");
 
-            var csv = require('./Tools/csv');
-            var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
-
-            csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", this);
-        }, function(err) { //Expand Abbreviations, Fix Capitalization & drop null rows
-            if (err) errorHandle(err);
-
-            var csv = require('./Tools/csv');
-
-            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", this);
-        }, function(err) {
-            if (err) errorHandle(err);
-
-            var csv = require('./Tools/csv');
-            //csv.deDup(cacheDir + source.replace(".json", "") + "/out.csv",this); //Not ready for production
-            csv.none(this);
-        }, function(err) { //Start Next Download
-            if (err) errorHandle(err);
-
-            console.log("Complete");
-
-            if (aws)
-                updateCache();
-            else
-                downloadCache(++cacheIndex);
+            if(err) 
+                callback(err)
+            else if (uploadToAWS)
+                updateCache(callback);
+            else   
+                callback();
         }
     );
-
 }
 
-function errorHandle(err){
-    console.log("ERROR: " + err);
-    console.log("Skipping to next source");
-    downloadCache(++cacheIndex);
+function updateManifest(source) {
+    var debug = require('debug')('conform:updateManifest');
+    fs.writeFileSync(sourcedir + source, JSON.stringify(source, null, 4));
+    debug("Updating Manifest of " + source);
 }
 
-function updateManifest() {
-    fs.writeFileSync(sourceDir + source, JSON.stringify(parsed, null, 4));
-    console.log("  Updating Manifest of " + source);
-}
+function updateCache(source, cachedir) {
 
-function updateCache() {
+    var debug = require('debug')('conform:updateCache');
 
-    parsed.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.replace(".json", ".csv");
+    source.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.id.replace(".json", ".csv");
 
-    console.log("  Updating s3 with " + source);
+    debug("Updating s3 with " + source.id);
 
     var s3 = new AWS.S3();
-    fs.readFile(cacheDir + source.replace(".json", "") + "/out.csv", function (err, data) {
+    fs.readFile(cachedir + source.id + "/out.csv", function (err, data) {
         if (err)
             throw new Error('Could not find data to upload');
 
@@ -238,35 +348,21 @@ function updateCache() {
 
         s3.putObject({
             Bucket: bucketName,
-            Key: source.replace(".json", ".csv"),
+            Key: source.id.replace(".json", ".csv"),
             Body: buffer,
             ACL: 'public-read'
         }, function (response) {
-            console.log('  Successfully uploaded package.');
-            updateManifest();
+            debug('Successfully uploaded package.');
+            updateManifest(source);
             downloadCache(++cacheIndex);
         });
     });
 }
 
-
-function showProgress(stream) {
-    var bar;
-    stream.on('response', function(res) {
-        var len = parseInt(res.headers['content-length'], 10);
-        bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
-            complete: '=',
-            incomplete: '-',
-            width: 20,
-            total: len
-        });
-    });
-    stream.on('data', function(chunk) {
-        if (bar) bar.tick(chunk.length);
-    }).on('end', function() {
-        if (parsed.compression == "zip")
-            unzipCache();
-        else
-            conformCache();
-    });
+module.exports = {
+    downloadCache: downloadCache,
+    main: main,
+    loadSource: loadSource
 }
+
+if (require.main === module) { ConformCLI(); }
