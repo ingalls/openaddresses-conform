@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /*jslint indent: 4, node: true */
 
-//NPM Dependancies
 var argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
     path = require('path'),
@@ -20,7 +19,8 @@ var fileTypeExtensions = {
 };
 
 function isShapefileExtension(ext) {
-    // ensure ext begins with a . ('.txt' not 'txt') and is not multipart ('.gz' not '.tar.gz')
+    // ensure ext begins with a . ('.txt' not 'txt') 
+    // and is not multipart ('.gz' not '.tar.gz')
     var e = ext.split('.');
     ext = e[e.length-1];
     if(ext[0]!=='.') ext = '.' + ext;
@@ -78,14 +78,14 @@ function ConformCLI(){
 
         sources.push(singleSource);
     } else {
-        //Catch missing /
+        // Catch missing /
         if (sourceDir.substr(sourceDir.length-1) != "/")
             sourceDir = sourceDir + "/";
 
-        //Setup list of sources
+        // Setup list of sources
         sources = fs.readdirSync(sourceDir);
 
-        //Only retain *.json
+        // Only retain *.json
         for (var i = 0; i < sources.length; i++) {
             if (sources[i].indexOf('.json') == -1) {
                 sources.splice(i, 1);
@@ -94,7 +94,7 @@ function ConformCLI(){
         }
     }
 
-    conformMain(sources);
+    main(sources);
 }
 
 function loadSource(sourcefile) {
@@ -103,26 +103,48 @@ function loadSource(sourcefile) {
     return source;
 }
 
-function conformMain(sources)
+function main(sources)
 {
+    var debug = require('debug')('conform:main');
+    
+    var failedSources = {};
     var toDoList = [];
+    
     sources.forEach(function(sourceFile, i) {
         source = loadSource(sourceFile);
-
         toDoList.push(function(cb) {
-            downloadCache(source, cacheDir, cb);
-        });
-        toDoList.push(function(cb) {
-            conformCache(source, cb);
-        });        
+            processSource(source, function(err, results) {
+                // mark sources as failed if an error occurred
+                if(err) failedSources[source.id] = err;
+                // but don't pass through errors -- we want to process all sources                
+                cb(null); 
+            });
+        }); 
     });
 
-    var done = function(err, results) {
-        console.log('Done!');
+    var done = function(err, results) {        
+        if (failedSources.length > 0) {
+            debug('Done with failure on the following sources:');
+            Object.keys(failedSources).forEach(function(failure) { debug(failure + ': ' + failedSources[failure].toString()); });
+        }
+        else {
+            debug('Done with no errors');
+        }
         process.exit(0);
     }
 
     async.series(toDoList, done);
+}
+
+function processSource(source, callback) {    
+    var tasks = [];
+    tasks.push(function(cb) {
+        downloadCache(source, cacheDir, cb);
+    });
+    tasks.push(function(cb) {
+        conformCache(source, cb);
+    });
+    async.series(tasks, callback);;
 }
 
 function downloadCache(source, cachedir, callback) {    
@@ -206,11 +228,11 @@ function unzipCache(source, cachedir, callback) {
 
             var entryExistsWithinSourceFilePath = source.conform.file && (entry.path.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
 
-            // skip directories entirely
+            // ## skip directories entirely
             if (entry.type === 'Directory') {
                 entry.autodrain();
             }            
-            // CSV/JSON
+            // ## CSV/JSON
             // IF NOT source.conform.file, take first JSON/CSV, error on multiple
             // IF source.conform.file, only take correct path
             else if ((['.json', '.geojson', '.csv'].indexOf(extension) > -1) && (!source.conform.file || (source.conform.file && (source.conform.file===entry.path)))) {
@@ -224,7 +246,7 @@ function unzipCache(source, cachedir, callback) {
                 var outpath = cachedir + source.id + '.' + source.conform.type;
                 q.push({entry: entry, outpath: outpath});
             }
-            // Shapefile
+            // ## Shapefile
             // IF NOT source.conform.file, take first shapefile, error on multiple
             // check if entry is party of specific shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
             else if (isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
@@ -239,6 +261,7 @@ function unzipCache(source, cachedir, callback) {
                 q.push({entry: entry, outpath: outpath});             
             }
             else {
+                // save ourselves some memory
                 entry.autodrain();
             }
         })
@@ -249,89 +272,63 @@ function unzipCache(source, cachedir, callback) {
 }
 
 function conformCache(callback){
+    
+    var debug = require('debug')('conform:conformCache');
+    var csv = require('./Tools/csv');
 
-    async.series(
+    async.series([
         function(cb) { //Convert to CSV
             var convert = require('./Tools/convert');
 
             var s_srs = parsed.conform.srs ? parsed.conform.srs : false;
 
             if (parsed.conform.type === "shapefile")
-                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this, cb);
+                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, cb);
             else if (parsed.conform.type === "shapefile-polygon")
-                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, this, cb);
+                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, cb);
             else if (parsed.conform.type === "geojson")
-                convert.json2csv(cacheDir + source, this, cb);
+                convert.json2csv(cacheDir + source, cb);
             else if (parsed.conform.type === "csv")
-                convert.csv(cacheDir + source.replace(".json", ".csv"), this, cb);
+                convert.csv(cacheDir + source.replace(".json", ".csv"), cb);
             else
-                cb(null);                
+                cb();                
         },         
         function(cb) { //Merge Columns
-            if (err) errorHandle(err);
-
             if (parsed.conform.test) //Stops at converting to find col names
                 process.exit(0);
-
-            var csv = require('./Tools/csv');
-
             if (parsed.conform.merge)
-                csv.mergeStreetName(parsed.conform.merge.slice(0),cacheDir + source.replace(".json", "") + "/out.csv",this);
+                csv.mergeStreetName(parsed.conform.merge.slice(0),cacheDir + source.replace(".json", "") + "/out.csv", cb);
             else
-                csv.none(this);
-        }, function(err) { //Split Address Columns
-            if (err) errorHandle(err);
-
+                csv.none(cb);
+        }, function(cb) { //Split Address Columns
             var csv = require('./Tools/csv');
-
             if (parsed.conform.split)
-                csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", this);
+                csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", cb);
             else
-                csv.none(this);
-        }, function(err) { //Drop Columns
-            if (err) errorHandle(err);
-
-            var csv = require('./Tools/csv');
+                csv.none(cb);
+        }, function(cb) { //Drop Columns
             var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
+            csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", cb);
+        }, function(cb) { //Expand Abbreviations, Fix Capitalization & drop null rows
+            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", cb);
+        }], function(err, results) {
+            debug("complete");
 
-            csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", this);
-        }, function(err) { //Expand Abbreviations, Fix Capitalization & drop null rows
-            if (err) errorHandle(err);
-
-            var csv = require('./Tools/csv');
-
-            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", this);
-        }, function(err) {
-            if (err) errorHandle(err);
-
-            var csv = require('./Tools/csv');
-            //csv.deDup(cacheDir + source.replace(".json", "") + "/out.csv",this); //Not ready for production
-            csv.none(this);
-        }, function(err) { //Start Next Download
-            if (err) errorHandle(err);
-
-            console.log("Complete");
-
-            if (aws)
-                updateCache();
-            else
-                downloadCache(++cacheIndex);
+            if(err) 
+                callback(err)
+            else if (aws)
+                updateCache(callback);
+            else   
+                callback();
         }
     );
-
-}
-
-function errorHandle(err){    
-    console.log("ERROR: " + err);
-    console.log("Skipping to next source");
-    downloadCache(++cacheIndex);
 }
 
 function updateManifest(source) {
+    var debug = require('debug')('conform:updateManifest');
     fs.writeFileSync(sourceDir + source, JSON.stringify(source, null, 4));
-    console.log("  Updating Manifest of " + source);
+    debug("Updating Manifest of " + source);
 }
-
 
 function updateCache(source) {
 
@@ -339,7 +336,7 @@ function updateCache(source) {
 
     parsed.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.id.replace(".json", ".csv");
 
-    debug("  Updating s3 with " + source.id);
+    debug("Updating s3 with " + source.id);
 
     var s3 = new AWS.S3();
     fs.readFile(cacheDir + source.replace(".json", "") + "/out.csv", function (err, data) {
@@ -356,7 +353,7 @@ function updateCache(source) {
             Body: buffer,
             ACL: 'public-read'
         }, function (response) {
-            debug('  Successfully uploaded package.');
+            debug('Successfully uploaded package.');
             updateManifest(source);
             downloadCache(++cacheIndex);
         });
