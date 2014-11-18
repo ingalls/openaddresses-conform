@@ -1,23 +1,25 @@
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
+    var debug = require('debug')('conform:polyshp2csv');
+
     var sh = require('execSync'),
         fs = require('fs'),
         geojson = require('geojson-stream');
 
     if (!shp) {
-        console.log('  Detecting Shapefile');
+        debug('  Detecting Shapefile');
         var tmp = fs.readdirSync(dir);
         var shp;
 
         for(var i = 0; i < tmp.length; i++){
             if (tmp[i].indexOf(".shp") != -1){
                 shp = tmp[i];
-                console.log('  Found: ' + shp);
+                debug('  Found: ' + shp);
                 break;
             }
         }
     }
 
-    console.log('  Converting ' + shp);
+    debug('  Converting ' + shp);
     if (s_srs)
         sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f GeoJSON ' + dir + 'tmp.json ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
     else
@@ -63,7 +65,7 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
                 }
                 fs.appendFileSync(dir + "/out.csv", row + "\n");
             } catch (err) {
-                console.log("  Malformed data package");
+                debug("  Malformed data package");
             }
         }
     });

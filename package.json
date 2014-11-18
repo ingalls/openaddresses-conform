@@ -8,34 +8,36 @@
     "addresses"
   ],
   "bin": {
-    "openaddresses-conform": "index.js"
+    "openaddresses-conform": "./index.js"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/openaddresses/openaddress-conform.git"
   },
-  "bin": {
-    "openaddresses-conform": "./index.js"
-  },
   "author": "Nick Ingalls",
   "license": "PD",
   "dependencies": {
+    "JSONStream": "0.9.0",
+    "async": "^0.9.0",
+    "aws-sdk": "~2.0.0-rc12",
+    "aws-sdk-apis": "3.1.9",
+    "buffers": "0.1.1",
+    "chainsaw": "0.1.0",
+    "debug": "^2.1.0",
+    "execSync": "~1.0.1-pre",
+    "flow": "~0.2.3",
+    "fstream": "^0.1.25",
+    "geojson-stream": "0.0.0",
+    "iconv": "^2.1.4",
     "minimist": "0.0.8",
     "progress": "~1.1.4",
-    "unzip": "~0.1.9",
-    "request": "~2.34.0",
-    "flow": "~0.2.3",
-    "execSync": "~1.0.1-pre",
     "readline": "0.0.3",
+    "request": "~2.34.0",
+    "rimraf": "^2.2.8",
     "stream": "0.0.1",
-    "aws-sdk": "~2.0.0-rc12",
-    "geojson-stream": "0.0.0",
-    "fstream": "^0.1.25",
-    "xmlbuilder": "2.4.4",
+    "tape": "^3.0.3",
+    "unzip": "~0.1.9",
     "xml2js": "0.4.4",
-    "aws-sdk-apis": "3.1.9",
-    "JSONStream": "0.9.0",
-    "chainsaw": "0.1.0",
-    "buffers": "0.1.1"
+    "xmlbuilder": "2.4.4"
   }
 }
