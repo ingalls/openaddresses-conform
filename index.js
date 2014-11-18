@@ -19,6 +19,25 @@ var fileTypeExtensions = {
     'csv': 'csv'
 };
 
+function isShapefileExtension(ext) {
+    // ensure ext begins with a . ('.txt' not 'txt') and is not multipart ('.gz' not '.tar.gz')
+    var e = ext.split('.');
+    ext = e[e.length-1];
+    if(ext[0]!=='.') ext = '.' + ext;
+    
+    return (['.shp', '.shx', '.dbf', '.prj', '.sbn', '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs', '.mxs', '.atx', '.xml', '.cpg', '.qix'].indexOf(ext) > -1);
+}
+
+function cachedFileLocation(source, cachedir){
+    if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
+    if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
+        return cachedir + source.id + '/' + source.id + '.' + fileTypeExtensions[source.conform.type];
+    }
+    else {
+        return cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
+    }
+}
+
 function ConformCLI(){
     require('debug').enable('conform:*');
 
@@ -115,30 +134,32 @@ function downloadCache(source, cachedir, callback) {
     } else {
         debug("Processing: " + source.id);
 
-        // add trailing slash, if it's missing
+        // add trailing slash if it's missing
         if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
 
-        // skip download if the cache has already been downloaded
-        
+        // skip download if the cache has already been downloaded            
         var sourceFile = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
-        if (!fs.existsSync(sourceFile)) {
+        if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
+            debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
             var stream = request(source.cache);
 
             var bar;
-            stream
-                .on('response', function(res) {
-                    var len = parseInt(res.headers['content-length'], 10);
-                    bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
-                        complete: '=',
-                        incomplete: '-',
-                        width: 20,
-                        total: len
+            if(debug.enabled) {
+                stream
+                    .on('response', function(res) {
+                        var len = parseInt(res.headers['content-length'], 10);
+                        bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
+                            complete: '=',
+                            incomplete: '-',
+                            width: 20,
+                            total: len
+                        });
+                    })
+                    .on('data', function(chunk) {
+                        if (bar) bar.tick(chunk.length);
                     });
-                })
-                .on('data', function(chunk) {
-                    if (bar) bar.tick(chunk.length);
-                })
-                .on('end', function() {
+            }
+            stream.on('end', function() {
                     if (source.compression)
                         unzipCache(source, cachedir, callback);
                     else
@@ -149,7 +170,7 @@ function downloadCache(source, cachedir, callback) {
             stream.pipe(fs.createWriteStream(downloadDestination));
 
         } else {
-            debug("Cache exists, skipping download");
+            debug("Cached file exists, skipping download");
             callback();
         }
     }
@@ -159,32 +180,72 @@ function unzipCache(source, cachedir, callback) {
     var fstream = require('fstream');
     var debug = require('debug')('conform:unzipCache');
 
-    debug("Starting Decompression");
-
-    var cacheSource = cachedir + source.id;
-    if (fs.existsSync(cacheSource)) {
-        debug("Folder Exists");
-        if (fs.existsSync(cacheSource + "/out.csv"))
-            fs.unlinkSync(cacheSource + "/out.csv");        
-    } else {
-        fs.mkdirSync(cachedir + source.id);
-    }
+    if (['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
+        if (!fs.existsSync(cachedir + source.id)) {
+            debug('creating directory for shapefile')
+            fs.mkdirSync(cachedir + source.id);
+        }
+    } 
+    
+    debug("Starting decompression to " + cachedir);
 
     var readStreamSource = cachedir + source.id + '.' + source.compression;
-    if (source.conform.type in ['csv', 'json'])        
-        writeStreamDest = cachedir + source.id + '.' + source.conform.type;
-    else
-        writeStreamDest = cachedir + source.id;
-    
-    var read = fs.createReadStream(readStreamSource),
-        write = fstream.Writer(writeStreamDest);
+    var read = fs.createReadStream(readStreamSource);            
 
-    write.on('close', function() {
-        debug("Finished Decompression"); //Daisy, Daisy...
-        callback(null);
-    });
+    var q = async.queue(function(task, qcallback) {        
+        task.entry.pipe(fs.createWriteStream(task.outpath).on('finish', qcallback));
+    }, 10);
 
-    read.pipe(unzip.Parse()).pipe(write);
+    // track the number of output files we encounter. if >1, our path scheme is not gonna work
+    matchingFiles = [];    
+    read
+        .pipe(unzip.Parse())
+        .on('entry', function(entry){
+
+            var extension = path.extname(entry.path);            
+
+            var entryExistsWithinSourceFilePath = source.conform.file && (entry.path.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
+
+            // skip directories entirely
+            if (entry.type === 'Directory') {
+                entry.autodrain();
+            }            
+            // CSV/JSON
+            // IF NOT source.conform.file, take first JSON/CSV, error on multiple
+            // IF source.conform.file, only take correct path
+            else if ((['.json', '.geojson', '.csv'].indexOf(extension) > -1) && (!source.conform.file || (source.conform.file && (source.conform.file===entry.path)))) {
+                debug('queueing ' + entry.path + ' for decompression');
+
+                if(!source.conform.file) {
+                    matchingFiles.push(entry.path);
+                    if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
+                }
+
+                var outpath = cachedir + source.id + '.' + source.conform.type;
+                q.push({entry: entry, outpath: outpath});
+            }
+            // Shapefile
+            // IF NOT source.conform.file, take first shapefile, error on multiple
+            // check if entry is party of specific shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
+            else if (isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
+                debug('queueing ' + entry.path + ' for decompression');
+
+                if(!source.conform.file && (extension === '.shp')) {
+                    matchingFiles.push(entry.path);
+                    if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
+                }
+            
+                var outpath = cachedir + source.id + '/' + source.id + extension;
+                q.push({entry: entry, outpath: outpath});             
+            }
+            else {
+                entry.autodrain();
+            }
+        })
+        .on('finish', function() {
+            debug('Decompression complete');
+            callback();
+        });
 }
 
 function conformCache(callback){
@@ -260,7 +321,7 @@ function conformCache(callback){
 
 }
 
-function errorHandle(err){
+function errorHandle(err){    
     console.log("ERROR: " + err);
     console.log("Skipping to next source");
     downloadCache(++cacheIndex);
