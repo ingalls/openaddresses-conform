@@ -42,8 +42,8 @@ function ConformCLI(){
     require('debug').enable('conform:*');
 
     //Command Line Args
-    var sourceDir = argv._[0],
-        cacheDir = argv._[1],
+    var sourcedir = argv._[0],
+        cachedir = argv._[1],
         bucketName = undefined,
         aws = false;
 
@@ -57,7 +57,7 @@ function ConformCLI(){
         source = null,
         parsed;
 
-    if (!sourceDir || !cacheDir) {
+    if (!sourcedir || !cachedir) {
         console.log('usage: openaddresses-conform <path-to-sources> <path-to-cache> <options>');
         console.log('       openaddresses-conform  <single source>  <path-to-cache> <options>');
         console.log('\nOptions:');
@@ -65,25 +65,20 @@ function ConformCLI(){
         process.exit(0);
     }
 
-    if (cacheDir.substr(cacheDir.length-1) != "/")
-        cacheDir = cacheDir + "/";
+    if (cachedir.substr(cachedir.length-1) != "/")
+        cachedir = cachedir + "/";
 
     var sources = [];
 
-    if (sourceDir.indexOf(".json") != -1) {
-        var dir = sourceDir.split("/"),
-            singleSource = dir[dir.length-1];
-
-        sourceDir = sourceDir.replace(singleSource,"");
-
-        sources.push(singleSource);
+    if (sourcedir.indexOf(".json") != -1) {    
+        sources.push(sourcedir);
     } else {
         // Catch missing /
-        if (sourceDir.substr(sourceDir.length-1) != "/")
-            sourceDir = sourceDir + "/";
+        if (sourcedir.substr(sourcedir.length-1) != "/")
+            sourcedir = sourcedir + "/";
 
         // Setup list of sources
-        sources = fs.readdirSync(sourceDir);
+        sources = fs.readdirSync(sourcedir);
 
         // Only retain *.json
         for (var i = 0; i < sources.length; i++) {
@@ -94,16 +89,16 @@ function ConformCLI(){
         }
     }
 
-    main(sources);
+    main(sources, cachedir);
 }
 
-function loadSource(sourcefile) {
+function loadSource(sourcefile) {    
     var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
     source.id = path.basename(sourcefile, '.json');
     return source;
 }
 
-function main(sources)
+function main(sources, cachedir)
 {
     var debug = require('debug')('conform:main');
     
@@ -113,7 +108,7 @@ function main(sources)
     sources.forEach(function(sourceFile, i) {
         source = loadSource(sourceFile);
         toDoList.push(function(cb) {
-            processSource(source, function(err, results) {
+            processSource(source, cachedir, function(err, results) {
                 // mark sources as failed if an error occurred
                 if(err) failedSources[source.id] = err;
                 // but don't pass through errors -- we want to process all sources                
@@ -136,10 +131,10 @@ function main(sources)
     async.series(toDoList, done);
 }
 
-function processSource(source, callback) {    
+function processSource(source, cachedir, callback) {    
     var tasks = [];
     tasks.push(function(cb) {
-        downloadCache(source, cacheDir, cb);
+        downloadCache(source, cachedir, cb);
     });
     tasks.push(function(cb) {
         conformCache(source, cb);
@@ -271,7 +266,7 @@ function unzipCache(source, cachedir, callback) {
         });
 }
 
-function conformCache(callback){
+function conformCache(source, cachedir, callback){
     
     var debug = require('debug')('conform:conformCache');
     var csv = require('./Tools/csv');
@@ -280,16 +275,16 @@ function conformCache(callback){
         function(cb) { //Convert to CSV
             var convert = require('./Tools/convert');
 
-            var s_srs = parsed.conform.srs ? parsed.conform.srs : false;
+            var s_srs = source.conform.srs ? source.conform.srs : false;
 
-            if (parsed.conform.type === "shapefile")
-                convert.shp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, cb);
-            else if (parsed.conform.type === "shapefile-polygon")
-                convert.polyshp2csv(cacheDir + source.replace(".json","") + "/", parsed.conform.file, s_srs, cb);
-            else if (parsed.conform.type === "geojson")
-                convert.json2csv(cacheDir + source, cb);
-            else if (parsed.conform.type === "csv")
-                convert.csv(cacheDir + source.replace(".json", ".csv"), cb);
+            if (source.conform.type === "shapefile")
+                convert.shp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
+            else if (source.conform.type === "shapefile-polygon")
+                convert.polyshp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
+            else if (source.conform.type === "geojson")
+                convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
+            else if (source.conform.type === "csv")
+                convert.csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
             else
                 cb();                
         },         
@@ -297,20 +292,20 @@ function conformCache(callback){
             if (parsed.conform.test) //Stops at converting to find col names
                 process.exit(0);
             if (parsed.conform.merge)
-                csv.mergeStreetName(parsed.conform.merge.slice(0),cacheDir + source.replace(".json", "") + "/out.csv", cb);
+                csv.mergeStreetName(source.conform.merge.slice(0), cachedir + source.id + "/out.csv", cb);
             else
                 csv.none(cb);
         }, function(cb) { //Split Address Columns
             var csv = require('./Tools/csv');
             if (parsed.conform.split)
-                csv.splitAddress(parsed.conform.split, 1, cacheDir + source.replace(".json", "") + "/out.csv", cb);
+                csv.splitAddress(source.conform.split, 1, cachedir + source.id + "/out.csv", cb);
             else
                 csv.none(cb);
         }, function(cb) { //Drop Columns
-            var keep = [parsed.conform.lon, parsed.conform.lat, parsed.conform.number, parsed.conform.street];
-            csv.dropCol(keep, cacheDir + source.replace(".json", "") + "/out.csv", cb);
+            var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
+            csv.dropCol(keep, cachedir + source.id + "/out.csv", cb);
         }, function(cb) { //Expand Abbreviations, Fix Capitalization & drop null rows
-            csv.expand(cacheDir + source.replace(".json", "") + "/out.csv", cb);
+            csv.expand(cachedir + source.id + "/out.csv", cb);
         }], function(err, results) {
             debug("complete");
 
@@ -326,11 +321,11 @@ function conformCache(callback){
 
 function updateManifest(source) {
     var debug = require('debug')('conform:updateManifest');
-    fs.writeFileSync(sourceDir + source, JSON.stringify(source, null, 4));
+    fs.writeFileSync(sourcedir + source, JSON.stringify(source, null, 4));
     debug("Updating Manifest of " + source);
 }
 
-function updateCache(source) {
+function updateCache(source, cachedir) {
 
     var debug = require('debug')('conform:updateCache');
 
@@ -339,7 +334,7 @@ function updateCache(source) {
     debug("Updating s3 with " + source.id);
 
     var s3 = new AWS.S3();
-    fs.readFile(cacheDir + source.replace(".json", "") + "/out.csv", function (err, data) {
+    fs.readFile(cachedir + source.id + "/out.csv", function (err, data) {
         if (err)
             throw new Error('Could not find data to upload');
 
@@ -362,7 +357,7 @@ function updateCache(source) {
 
 module.exports = {
     downloadCache: downloadCache,
-    conformMain: conformMain,
+    main: main,
     loadSource: loadSource
 }
 
