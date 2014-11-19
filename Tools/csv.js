@@ -34,7 +34,6 @@ exports.dropCol = function dropCol(keep, loc, callback){
             keep = keep.map(function(x) { return x.toLowerCase(); });
             data = data.map(function(x) { return x.toLowerCase(); });
             for (var i = 0; i < data.length; i++){            
-                // @TODO replace this with a simple .indexOf
                 if (data[i] === keep[0])
                     keepCols.lon = i;
                 else if (data[i] === keep[1])
