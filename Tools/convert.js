@@ -82,20 +82,23 @@ exports.shp2csv = function shp2csv(dir, shp, s_srs, callback) {
     var debug = require('debug')('conform:shp2csv');
 
     if (!shp) {
-        debug('Detecting Shapefile');
+        debug('Detecting Shapefile');        
         var tmp = fs.readdirSync(dir);
         var shp;
 
         for(var i = 0; i < tmp.length; i++){
             if (tmp[i].indexOf(".shp") != -1){
                 shp = tmp[i];
-                console.log('  Found: ' + shp);
+                debug('  Found: ' + shp);
                 break;
             }
         }
     }
 
     debug('Converting ' + shp);
+
+    debug('directory: ' + dir);
+    
     if (s_srs)
         sh.run('ogr2ogr -s_srs ' + s_srs + ' -t_srs EPSG:4326 -f CSV ' + dir + 'out.csv ' + dir + shp + ' -lco GEOMETRY=AS_XYZ');
     else

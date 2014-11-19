@@ -205,3 +205,76 @@ exports.expand = function expand(loc, callback) {
         .pipe(outstream);        
 };
 
+//If the address is given as one field
+//This will take a given number of fields as the number address (numFields)
+//numFields defaults to 1
+//and use the remainder as the street address
+//Creates two new columns called auto_num & auto_str
+exports.splitAddress = function splitAddress(col, numFields, loc, callback){
+    var debug = require('debug')('conform:splitAddress');
+
+    debug('Splitting Address Column');
+
+    col = col.toLowerCase();
+
+    var fs = require('fs'),
+        readline = require('readline'),
+        stream = require('stream');
+  
+    var instream = fs.createReadStream(loc),
+        outstream = new stream(),
+        rl = readline.createInterface(instream, outstream);
+
+    var linenum = 1,
+        element, //Stores the element # to split
+        length; //Stores start position of auto_num
+
+    rl.on('line', function(line) {
+        var elements = line.split(',');
+    
+        if (linenum == 1){
+            fs.appendFileSync('./tmp.csv', elements+ ',auto_number,auto_street\n'); //Write Headers
+            length = elements.length + 1; //Stores index of auto_num
+      
+            for (var i = 0; i < elements.length; i++){
+                col = col;
+                
+                if (col == elements[i].toLowerCase())
+                element = i;
+            }
+        } else {
+            if (elements[element]) {
+                var token = elements[element].split(' ');
+                var street = token[numFields];
+                var number = token[0];
+        
+                for (var num = 1; num < numFields; num++){
+                    number = number + " " + token[num];
+                }
+          
+                for (var str = numFields+1; str < token.length; str++){
+                    street = street + " " + token[str];
+                }
+          
+                elements[length - 1] = number;
+                elements[length] = street;
+                fs.appendFileSync('./tmp.csv', elements + '\n');
+            }
+        }
+
+        linenum++;
+    });
+
+    rl.on('close', function() {
+        fs.unlinkSync(loc);
+        var write = fs.createWriteStream(loc);
+
+        write.on('close', function() {
+            fs.unlinkSync('./tmp.csv');
+            callback();
+        });
+        
+        fs.createReadStream('./tmp.csv').pipe(write);
+    });
+};
+

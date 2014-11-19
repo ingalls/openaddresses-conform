@@ -281,9 +281,9 @@ function conformCache(source, cachedir, callback){
             var s_srs = source.conform.srs ? source.conform.srs : false;
 
             if (source.conform.type === "shapefile")
-                convert.shp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
+                convert.shp2csv(cachedir + source.id + "/", source.id + '.shp', s_srs, cb);
             else if (source.conform.type === "shapefile-polygon")
-                convert.polyshp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
+                convert.polyshp2csv(cachedir + source.id + "/", source.id + '.shp', s_srs, cb);
             else if (source.conform.type === "geojson")
                 convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
             else if (source.conform.type === "csv") {
