@@ -205,8 +205,6 @@ exports.expand = function expand(loc, callback) {
         .pipe(outstream);        
 };
 
-/*
-// currently unused
 
 //If the address is given as one field
 //This will take a given number of fields as the number address (numFields)
@@ -280,11 +278,10 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         fs.createReadStream('./tmp.csv').pipe(write);
     });
 };
-*/
 
 
 /*
-// currently unused
+// currently unused?
 exports.deDup = function deDup(loc, callback) {
     var fs = require('fs'),
         readline = require('readline'),
