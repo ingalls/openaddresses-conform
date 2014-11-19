@@ -168,6 +168,7 @@ function downloadCache(source, cachedir, callback) {
         var sourceFile = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
         if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
             debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
+            debug('fetching ' + source.cache);
             var stream = request(source.cache);
 
             var bar;
@@ -309,26 +310,39 @@ function conformCache(source, cachedir, callback){
             } 
             else
                 cb();                
-        },         
-        function(cb) { //Merge Columns
-            if (source.conform.test) //Stops at converting to find col names
+        }, 
+
+        // Merge Columns        
+        function(cb) { 
+            if (source.conform.test) // Stops at converting to find col names
                 process.exit(0);
             if (source.conform.merge)
                 csv.mergeStreetName(source.conform.merge.slice(0), cachedir + source.id + "/out.csv", cb);
             else
                 cb();
-        }, function(cb) { //Split Address Columns            
+        }, 
+
+        // Split Address Columns            
+        function(cb) { 
             var csv = require('./Tools/csv');
             if (source.conform.split)
                 csv.splitAddress(source.conform.split, 1, cachedir + source.id + "/out.csv", cb);
             else
                 cb();
-        }, function(cb) { //Drop Columns
+        }, 
+
+        // Drop Columns
+        function(cb) { 
             var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
             csv.dropCol(keep, cachedir + source.id + "/out.csv", cb);
-        }, function(cb) { //Expand Abbreviations, Fix Capitalization & drop null rows            
+        }, 
+
+        // Expand Abbreviations, Fix Capitalization & drop null rows            
+        function(cb) { 
             csv.expand(cachedir + source.id + "/out.csv", cb);
-        }], function(err, results) {
+        }], 
+
+        function(err, results) {
             debug("complete");
 
             if(err) 
