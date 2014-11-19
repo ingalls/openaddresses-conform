@@ -269,15 +269,9 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
     });
 
     rl.on('close', function() {
-        fs.unlinkSync(loc);
-        var write = fs.createWriteStream(loc);
-
-        write.on('close', function() {
-            fs.unlinkSync('./tmp.csv');
-            callback();
+        fs.rename('./tmp.csv', loc, function(err) {
+            callback(err);
         });
-        
-        fs.createReadStream('./tmp.csv').pipe(write);
     });
 };
 */
