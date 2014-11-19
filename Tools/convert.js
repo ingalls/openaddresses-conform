@@ -73,6 +73,7 @@ exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
     });
 
     stream.on('close', function(){
+        fs.unlinkSync(dir + 'tmp.json');
         callback();
     });
 }
