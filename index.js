@@ -107,13 +107,17 @@ function loadSource(sourcefile) {
     return source;
 }
 
-function main(sources, cachedir)
+function main(sources, cachedir, callback)
 {
     var debug = require('debug')('conform:main');
     
     var failedSources = {};
     var toDoList = [];
     
+    // ensure cachedir ends with a '/'
+    if(cachedir[cachedir.length - 1] !== path.sep)
+        cachedir = cachedir + path.sep;
+
     sources.forEach(function(sourceFile, i) {
         source = loadSource(sourceFile);
         toDoList.push(function(cb) {            
@@ -128,13 +132,24 @@ function main(sources, cachedir)
 
     var done = function(err, results) {        
         if (failedSources.length > 0) {
-            debug('Done with failure on the following sources:');
-            Object.keys(failedSources).forEach(function(failure) { debug(failure + ': ' + failedSources[failure].toString()); });
+            if(callback) {
+                callback(failedSources);
+            }
+            else {
+                debug('Done with ' + failedSources.length + ' failure(s) on the following sources:');
+                Object.keys(failedSources).forEach(function(failure) { debug(failure + ': ' + failedSources[failure].toString()); });                
+                process.exit(0);
+            }
         }
         else {
-            debug('Done with no errors');
+            if(callback) {
+                callback(null);
+            }
+            else {
+                debug('Done with no errors');    
+                process.exit(0);
+            }            
         }
-        process.exit(0);
     }
 
     async.series(toDoList, done);
