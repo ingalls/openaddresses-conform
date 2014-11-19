@@ -18,6 +18,8 @@ var fileTypeExtensions = {
     'csv': 'csv'
 };
 
+var uploadToAWS = false;
+
 function isShapefileExtension(ext) {
     // ensure ext begins with a . ('.txt' not 'txt') 
     // and is not multipart ('.gz' not '.tar.gz')
@@ -45,11 +47,11 @@ function ConformCLI(){
     var sourcedir = argv._[0],
         cachedir = argv._[1],
         bucketName = undefined,
-        aws = false;
+        uploadToAWS = false;
 
     if (argv._.length == 3)
     {
-        aws = true;
+        uploadToAWS = true;
         bucketName = (argv._[2] == 'aws' ? 'openaddresses' : argv._[2]);
     }
 
@@ -107,7 +109,7 @@ function main(sources, cachedir)
     
     sources.forEach(function(sourceFile, i) {
         source = loadSource(sourceFile);
-        toDoList.push(function(cb) {
+        toDoList.push(function(cb) {            
             processSource(source, cachedir, function(err, results) {
                 // mark sources as failed if an error occurred
                 if(err) failedSources[source.id] = err;
@@ -133,11 +135,12 @@ function main(sources, cachedir)
 
 function processSource(source, cachedir, callback) {    
     var tasks = [];
+    var debug = require('debug')('conform:processSource');
     tasks.push(function(cb) {
         downloadCache(source, cachedir, cb);
     });
-    tasks.push(function(cb) {
-        conformCache(source, cb);
+    tasks.push(function(cb) {          
+        conformCache(source, cachedir, cb);
     });
     async.series(tasks, callback);;
 }
@@ -283,35 +286,36 @@ function conformCache(source, cachedir, callback){
                 convert.polyshp2csv(cachedir + source.id + "/", source.conform.file, s_srs, cb);
             else if (source.conform.type === "geojson")
                 convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
-            else if (source.conform.type === "csv")
-                convert.csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
+            else if (source.conform.type === "csv") {
+                convert.csv(source, cachedir, fileTypeExtensions[source.conform.type], cb);
+            } 
             else
                 cb();                
         },         
         function(cb) { //Merge Columns
-            if (parsed.conform.test) //Stops at converting to find col names
+            if (source.conform.test) //Stops at converting to find col names
                 process.exit(0);
-            if (parsed.conform.merge)
+            if (source.conform.merge)
                 csv.mergeStreetName(source.conform.merge.slice(0), cachedir + source.id + "/out.csv", cb);
             else
-                csv.none(cb);
-        }, function(cb) { //Split Address Columns
+                cb();
+        }, function(cb) { //Split Address Columns            
             var csv = require('./Tools/csv');
-            if (parsed.conform.split)
+            if (source.conform.split)
                 csv.splitAddress(source.conform.split, 1, cachedir + source.id + "/out.csv", cb);
             else
-                csv.none(cb);
+                cb();
         }, function(cb) { //Drop Columns
             var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
             csv.dropCol(keep, cachedir + source.id + "/out.csv", cb);
-        }, function(cb) { //Expand Abbreviations, Fix Capitalization & drop null rows
+        }, function(cb) { //Expand Abbreviations, Fix Capitalization & drop null rows            
             csv.expand(cachedir + source.id + "/out.csv", cb);
         }], function(err, results) {
             debug("complete");
 
             if(err) 
                 callback(err)
-            else if (aws)
+            else if (uploadToAWS)
                 updateCache(callback);
             else   
                 callback();
@@ -329,7 +333,7 @@ function updateCache(source, cachedir) {
 
     var debug = require('debug')('conform:updateCache');
 
-    parsed.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.id.replace(".json", ".csv");
+    source.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.id.replace(".json", ".csv");
 
     debug("Updating s3 with " + source.id);
 

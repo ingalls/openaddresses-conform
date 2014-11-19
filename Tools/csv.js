@@ -1,225 +1,212 @@
+var fs = require('fs'),
+    stream = require('stream'),
+    transform = require('stream-transform'),
+    parse = require('csv-parse'),
+    stringify = require('csv-stringify');
+
 exports.dropCol = function dropCol(keep, loc, callback){
-    var fs = require('fs'),
-        //readline = require('readline'),
-        stream = require('stream'),
-        transform = require('stream-transform'),
-        parse = require('csv-parse'),
-        stringify = require('csv-stringify'),
-        debug = require('debug')('conform:dropCol');
+    var debug = require('debug')('conform:dropCol');
 
     debug("Dropping Unnecessary Data");
-    
+
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
-    
-    var parser = parse();
-    var stringifier = stringify();
 
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
 
-    var keepArray = []; // Stores what to do with each column number
-    
+    var stringifier = stringify();
+    var parser = parse({ relax: true });
+
+    var keepCols = {
+        lon: null,
+        lat: null,
+        str: null,
+        num: null
+    };
+
     var linenum = 0;
-    
+
     var transformer = transform(function(data) {
         linenum++;
 
         if(linenum === 1) {
             keep = keep.map(function(x) { return x.toLowerCase(); });
             data = data.map(function(x) { return x.toLowerCase(); });
-            for (var i = 0; i < data.length; i++){
+            for (var i = 0; i < data.length; i++){            
+                // @TODO replace this with a simple .indexOf
                 if (data[i] === keep[0])
-                    keepArray.push('lon');
+                    keepCols.lon = i;
                 else if (data[i] === keep[1])
-                    keepArray.push('lat');
+                    keepCols.lat = i;                    
                 else if (data[i] === keep[2])
-                    keepArray.push('num');
+                    keepCols.num = i;                
                 else if (data[i] === keep[3])
-                    keepArray.push('str');
-                else
-                    keepArray.push('null');
+                    keepCols.str = i;
             }
-
-            debug(keepArray);
 
             return ['LON','LAT','NUMBER','STREET'];
         }
         else {
-            debug(data);
-            var lon, lat, num, str;
-            for (var i = 0; i < data.length; i++){
-                if (keepArray[i] === 'lon') {
-                    lon = parseFloat(data[i]).toFixed(6);
-                } else if (data[i] === 'lat') {
-                    lat = parseFloat(data[i]).toFixed(6);
-                } else if (keepArray[i] === 'num') { 
-                    num = data[i];
-                } else if (keepArray[i] === 'str') {
-                    str = data[i];
-                }
-            }
-            //debug([lon, lat, num, str]);
-            return [lon, lat, num, str];
+            return [
+                data[keepCols.lon],
+                data[keepCols.lat],
+                data[keepCols.num],
+                data[keepCols.str]
+            ];
         }
     });    
 
     outstream.on('close', function() {
-        debug('finished writing');
-
-        fs.unlinkSync(loc);
-        var write = fs.createWriteStream(loc);
-
-        write.on('close', function() {
-            //fs.unlinkSync('./tmp.csv');
-            callback();
+        fs.rename('./tmp.csv', loc, function(err) {
+            callback(err);
         });
-        
-        fs.createReadStream('./tmp.csv').pipe(write);
     });
 
-    instream.pipe(parser).pipe(transformer).pipe(stringifier).pipe(outstream);
-    // instream.pipe(parser).pipe(transformer).pipe(stringifier).pipe(process.stdout);
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream);    
 };
 
-//Joins Columns in order that they are given in array into 'street' column
+//Joins Columns in order that they are given in array into 'auto_street' column
 exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
-    var fs = require('fs'),
-        readline = require('readline'),
-        debug = require('debug')('conform:mergeStreetName'),
-        stream = require('stream'),
-        instream = fs.createReadStream(loc),
-        outstream = new stream(),
-        rl = readline.createInterface(instream, outstream),
-        linenum = 1;
+    var debug = require('debug')('conform:mergeStreetName');
+    debug("Merging Columns");
+
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
 
-    debug("Merging Columns");
+    var instream = fs.createReadStream(loc);
+    var outstream = fs.createWriteStream('./tmp.csv');
 
-    for (var i = 0; i < cols.length; i++) {
-        cols[i] = cols[i].toLowerCase();
+    var stringifier = stringify();
+    var parser = parse({ relax: true });
+    parser.on('error', function(err) {
+        debug(err);    
+    });
+
+    var linenum = 0;
+    var mergeIndices = [];
+
+    var transformer = transform(function(data) {
+        linenum++;
+
+        if (linenum === 1) {
+            lowerData = data.map(function(x) { return x.toLowerCase(); } );            
+            cols.forEach(function(name, i) {
+                mergeIndices.push(lowerData.indexOf(name.toLowerCase()));
+            });
+            data.push('auto_street');
+            return data;
+        }
+        else {
+            var pieces = [];
+            mergeIndices.forEach(function(index) {
+                pieces.push(data[index]);
+            });
+            data.push(pieces.join(' '));
+            return data;
+        }
+    });
+    
+    outstream.on('close', function() {
+        fs.rename('./tmp.csv', loc, function(err){
+            callback(err);
+        });
+    });
+
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream); 
+};
+
+// this function is @ingalls' code -- I haven't touched it because it's magic --@sbma44
+// do substitutions 
+function _expandElements(elements) {
+    expand = require('./expand.json');
+
+    elements[3] = elements[3].toLowerCase();
+    elements[3] = elements[3].replace(/\./g,'');
+    elements[2] = elements[2].trim();
+
+    for (var i = 0; i < expand.abbr.length; i++) {
+        var key = expand.abbr[i].k;
+        var value = expand.abbr[i].v;
+        var tokenized = elements[3].split(' ');
+
+        for(var e = 0; e < tokenized.length; e++) {
+            if (tokenized[e] == key)
+            tokenized[e] = value;
+        }
+
+        elements[3] = tokenized.join(' ');
     }
 
-    rl.on('line', function(line) {
-        var elements = line.split(',');
+    //Take care of the pesky st vs saint
+    var tokenized = elements[3].split(' ');
+    var length = tokenized.length;
+
+    //Only converts to street if in the last half of the words
+    for (var i = 0; length - i >= Math.floor(length/2); i++) {
+        if (tokenized[length - i] === "st")
+            tokenized[length - i] = "street";
+    }
     
-        if (linenum == 1){
-            for (var i = 0; i < elements.length; i++) {
-                elements[i] = elements[i].toLowerCase();
-                for (var e = 0; e < cols.length; e++) {
-                    if (cols[e] == elements[i]){
-                        cols[e] = i;
-                    }
-                }
-            }
-            elements.splice(3,0,"auto_street");
-            fs.appendFileSync('./tmp.csv', elements+'\n'); //Writes Headers to File
-        } else {
-            var street = "";
+    //Only converts to saint if in the last half of the words
+    for (var i = 0; i <= Math.ceil(length/2); i++) {
+        if (tokenized[i] === "st")
+            tokenized[i] = "saint";
+    }
 
-            for (var i = 0; i < cols.length; i++){
-                if (elements[cols[i]])
-                    street = street.trim() + " " +  elements[cols[i]].trim();
-            }
-            elements.splice(3,0,street.trim());
-            fs.appendFileSync('./tmp.csv', elements+'\n');
-        }
-        ++linenum;
-    });
+    elements[3] = tokenized.join(" ");
+    elements[3] = elements[3].toLowerCase().replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
+    elements[3] = elements[3].trim();
 
-    rl.on('close', function() {
-        fs.unlinkSync(loc);
-        var write = fs.createWriteStream(loc);
-
-        write.on('close', function() {
-            fs.unlinkSync('./tmp.csv');
-            callback();
-        });
-        
-        fs.createReadStream('./tmp.csv').pipe(write);
-    });
-};
+    return elements;
+}
 
 exports.expand = function expand(loc, callback) {
-    var fs = require('fs'),
-        readline = require('readline'),
-        stream = require('stream'),
-        debug = require('debug')('conform:expand'),
-        expand = require('./expand.json');
-        
-    var instream = fs.createReadStream(loc),
-        outstream = new stream(),
-        rl = readline.createInterface(instream, outstream),
-        linenum = 1;
-
-    rl.on('line', function(line) {
-        var elements = line.split(',');
-    
-        if (linenum == 1) {
-            fs.writeFileSync('./tmp.csv', elements+'\n'); //Write Headers
-        } else {
-            if (elements[0] !=="NaN" && elements[1] !=="NaN" && elements[2] !== "NaN" && elements[3] && elements[3].trim() !== "") {
-                
-                elements[3] = elements[3].toLowerCase();
-                elements[3] = elements[3].replace(/\./g,'');
-                elements[2] = elements[2].trim();
-
-                if (linenum % 10000 === 0)
-                    debug('Processed Addresses: ' + linenum);
-          
-                for (var i = 0; i < expand.abbr.length; i++) {
-                    var key = expand.abbr[i].k;
-                    var value = expand.abbr[i].v;
-                    var tokenized = elements[3].split(' ');
+    var debug = require('debug')('conform:expand');
             
-                    for(var e = 0; e < tokenized.length; e++) {
-                        if (tokenized[e] == key)
-                        tokenized[e] = value;
-                    }
-            
-                    elements[3] = tokenized.join(' ');
-                }
-          
-                //Take care of the pesky st vs saint
-                var tokenized = elements[3].split(' ');
-                var length = tokenized.length;
-          
-                //Only converts to street if in the last half of the words
-                for (var i = 0; length - i >= Math.floor(length/2); i++) {
-                    if (tokenized[length - i] === "st")
-                        tokenized[length - i] = "street";
-                }
-                
-                //Only converts to saint if in the last half of the words
-                for (var i = 0; i <= Math.ceil(length/2); i++) {
-                    if (tokenized[i] === "st")
-                        tokenized[i] = "saint";
-                }
-
-                elements[3] = tokenized.join(" ");
-                elements[3] = elements[3].toLowerCase().replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
-                elements[3] = elements[3].trim();
-          
-                fs.appendFileSync('./tmp.csv', elements+'\n');
-            }
-        }
+    var instream = fs.createReadStream(loc);
+    var outstream = fs.createWriteStream('./tmp.csv');
     
+    var stringifier = stringify();
+    var parser = parse({ relax: true });
+    parser.on('error', function(err) {
+        debug(err);    
+    });
+
+    var linenum = 0;
+
+    var transformer = transform(function(data) {
         linenum++;
+
+        if (linenum % 10000 === 0)
+            debug('Processed Addresses: ' + linenum);
+
+        return (linenum === 1) ? data : _expandElements(data);
     });
 
-    rl.on('close', function() {
-        fs.unlinkSync(loc);
-        var write = fs.createWriteStream(loc);
-
-        write.on('close', function() {
-            fs.unlinkSync('./tmp.csv');
-            callback();
+    outstream.on('close', function() {
+        fs.rename('./tmp.csv', loc, function(err) {
+            callback(err);
         });
-        
-        fs.createReadStream('./tmp.csv').pipe(write);
     });
+
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream);        
 };
+
+/*
+// currently unused
 
 //If the address is given as one field
 //This will take a given number of fields as the number address (numFields)
@@ -293,7 +280,11 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         fs.createReadStream('./tmp.csv').pipe(write);
     });
 };
+*/
 
+
+/*
+// currently unused
 exports.deDup = function deDup(loc, callback) {
     var fs = require('fs'),
         readline = require('readline'),
@@ -350,7 +341,4 @@ exports.deDup = function deDup(loc, callback) {
     });
 
 };
-
-exports.none = function none(callback) {
-    callback();
-};
+*/
