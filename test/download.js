@@ -8,7 +8,7 @@ var test = require('tape'),
 test('Download/unzip test', function(t) {
     debug.enable('conform:*');
 
-    t.plan(5);
+    t.plan(7);
 
     var cachedir = './test/tmp';
     rimraf.sync(cachedir);    
@@ -23,12 +23,13 @@ test('Download/unzip test', function(t) {
         debug('downloading us-wa-snohmish-test');
         conform.downloadCache(conform.loadSource('./test/fixtures/us-wa-snohmish-test.json'), cachedir, function(){        
             debug('us-wa-snohmish-test.json download completed');
-            t.assert(fs.existsSync(cachedir + '/us-wa-snohmish-test.zip'), 'Zipfile downloaded successfully');
-            t.assert(['./test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.dbf',
-            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.prj',
-            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.shp',
-            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.shx',
-            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.xml'].every(function(f){
+            t.assert(fs.existsSync(cachedir + '/us-wa-snohmish-test.zip'), 'us-wa-snohmish-test zipfile downloaded successfully');
+            t.assert([
+                cachedir + '/us-wa-snohmish-test/us-wa-snohmish-test.dbf',
+                cachedir + '/us-wa-snohmish-test/us-wa-snohmish-test.prj',
+                cachedir + '/us-wa-snohmish-test/us-wa-snohmish-test.shp',
+                cachedir + '/us-wa-snohmish-test/us-wa-snohmish-test.shx',
+                cachedir + '/us-wa-snohmish-test/us-wa-snohmish-test.shp.xml'].every(function(f){
                 return fs.existsSync(f);
             }), 'us-wa-snohmish-test shapefile components extracted successfully');
             callback();
@@ -56,8 +57,29 @@ test('Download/unzip test', function(t) {
         });
     });
 
+    // zipped shapefile-polygon
+    // zipped CSV
+    testSeries.push(function(callback) {
+        debug('downloading us-va-james_city-test');
+        conform.downloadCache(conform.loadSource('./test/fixtures/us-va-james_city-test.json'), cachedir, function() {
+            debug('us-va-james_city-test download completed');
+            t.assert(fs.existsSync(cachedir + '/us-va-james_city-test.zip'), 'us-va-james_city-test zipfile downloaded successfully');
+            t.assert([
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.dbf',
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.prj',
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.sbn',
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.sbx',
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.shp',
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.shx',
+                cachedir + '/us-va-james_city-test/us-va-james_city-test.shp.xml'].every(function(f){
+                return fs.existsSync(f);
+            }), 'us-va-james_city-test shapefile components extracted successfully');
+            callback();
+        });
+    });
+
     async.series(testSeries, function() {
         // cleanup
-        rimraf(cachedir);
+        if(fs.existsSync(cachedir)) rimraf.sync(cachedir);        
     });
 });
