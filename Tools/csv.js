@@ -1,84 +1,92 @@
 exports.dropCol = function dropCol(keep, loc, callback){
     var fs = require('fs'),
-        readline = require('readline'),
-        stream = require('stream');
+        //readline = require('readline'),
+        stream = require('stream'),
+        transform = require('stream-transform'),
+        parse = require('csv-parse'),
+        stringify = require('csv-stringify'),
+        debug = require('debug')('conform:dropCol');
 
-    console.log("  Dropping Unnecessary Data");
+    debug("Dropping Unnecessary Data");
     
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
     
-    var instream = fs.createReadStream(loc),
-        outstream = new stream();
+    var parser = parse();
+    var stringifier = stringify();
+
+    var instream = fs.createReadStream(loc);
+    var outstream = fs.createWriteStream('./tmp.csv');
+
+    var keepArray = []; // Stores what to do with each column number
     
-    var rl = readline.createInterface(instream, outstream),
-        keepArray = []; //Stores the column numbers to keep
+    var linenum = 0;
     
-    var linenum = 1;
-    
-    rl.on('line', function(line) {
-        var elements = line.split(',');
-        
-        if (linenum === 1){
-            fs.writeFileSync('./tmp.csv', 'LON,LAT,NUMBER,STREET\n'); //Ready Output File
-            
-            elements = elements.join('|').toLowerCase().split('|');
-            keep = keep.join('|').toLowerCase().split('|');
-      
-            //keepArray.push('lon'); //X Must be first column
-            //keepArray.push('lat'); //Y Must be 2nd column
-      
-            for (var i = 0; i < elements.length; i++){
-                if (elements[i] === keep[0])
+    var transformer = transform(function(data) {
+        linenum++;
+
+        if(linenum === 1) {
+            keep = keep.map(function(x) { return x.toLowerCase(); });
+            data = data.map(function(x) { return x.toLowerCase(); });
+            for (var i = 0; i < data.length; i++){
+                if (data[i] === keep[0])
                     keepArray.push('lon');
-                else if (elements[i] === keep[1])
+                else if (data[i] === keep[1])
                     keepArray.push('lat');
-                else if (elements[i] === keep[2])
+                else if (data[i] === keep[2])
                     keepArray.push('num');
-                else if (elements[i] === keep[3])
+                else if (data[i] === keep[3])
                     keepArray.push('str');
                 else
                     keepArray.push('null');
             }
-            
-        } else {
+
+            debug(keepArray);
+
+            return ['LON','LAT','NUMBER','STREET'];
+        }
+        else {
+            debug(data);
             var lon, lat, num, str;
-      
-            for (var i = 0; i < elements.length; i++){
+            for (var i = 0; i < data.length; i++){
                 if (keepArray[i] === 'lon') {
-                    lon = parseFloat(elements[i]).toFixed(6);
-                } else if (keepArray[i] === 'lat') {
-                    lat = parseFloat(elements[i]).toFixed(6);
+                    lon = parseFloat(data[i]).toFixed(6);
+                } else if (data[i] === 'lat') {
+                    lat = parseFloat(data[i]).toFixed(6);
                 } else if (keepArray[i] === 'num') { 
-                    num = elements[i];
+                    num = data[i];
                 } else if (keepArray[i] === 'str') {
-                    str = elements[i];
+                    str = data[i];
                 }
             }
-            
-            fs.appendFileSync('./tmp.csv', lon + ',' + lat + ',' + num + ',' + str + '\n');
+            //debug([lon, lat, num, str]);
+            return [lon, lat, num, str];
         }
+    });    
 
-        linenum++;
-    });
+    outstream.on('close', function() {
+        debug('finished writing');
 
-    rl.on('close', function() {
         fs.unlinkSync(loc);
         var write = fs.createWriteStream(loc);
 
         write.on('close', function() {
-            fs.unlinkSync('./tmp.csv');
+            //fs.unlinkSync('./tmp.csv');
             callback();
         });
         
         fs.createReadStream('./tmp.csv').pipe(write);
     });
+
+    instream.pipe(parser).pipe(transformer).pipe(stringifier).pipe(outstream);
+    // instream.pipe(parser).pipe(transformer).pipe(stringifier).pipe(process.stdout);
 };
 
 //Joins Columns in order that they are given in array into 'street' column
 exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
     var fs = require('fs'),
         readline = require('readline'),
+        debug = require('debug')('conform:mergeStreetName'),
         stream = require('stream'),
         instream = fs.createReadStream(loc),
         outstream = new stream(),
@@ -87,7 +95,7 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
 
-    console.log("  Merging Columns");
+    debug("Merging Columns");
 
     for (var i = 0; i < cols.length; i++) {
         cols[i] = cols[i].toLowerCase();
@@ -137,6 +145,7 @@ exports.expand = function expand(loc, callback) {
     var fs = require('fs'),
         readline = require('readline'),
         stream = require('stream'),
+        debug = require('debug')('conform:expand'),
         expand = require('./expand.json');
         
     var instream = fs.createReadStream(loc),
@@ -157,7 +166,7 @@ exports.expand = function expand(loc, callback) {
                 elements[2] = elements[2].trim();
 
                 if (linenum % 10000 === 0)
-                    console.log('  Processed Addresses: ' + linenum);
+                    debug('Processed Addresses: ' + linenum);
           
                 for (var i = 0; i < expand.abbr.length; i++) {
                     var key = expand.abbr[i].k;
@@ -218,7 +227,9 @@ exports.expand = function expand(loc, callback) {
 //and use the remainder as the street address
 //Creates two new columns called auto_num & auto_str
 exports.splitAddress = function splitAddress(col, numFields, loc, callback){
-    console.log('  Splitting Address Column');
+    var debug = require('debug')('conform:splitAddress');
+
+    debug('Splitting Address Column');
 
     col = col.toLowerCase();
 
