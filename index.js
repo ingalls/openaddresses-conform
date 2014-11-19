@@ -20,14 +20,21 @@ var fileTypeExtensions = {
 
 var uploadToAWS = false;
 
-function isShapefileExtension(ext) {
+function _isShapefileExtension(ext) {
     // ensure ext begins with a . ('.txt' not 'txt') 
-    // and is not multipart ('.gz' not '.tar.gz')
-    var e = ext.split('.');
-    ext = e[e.length-1];
+    if(ext[0]!=='.') ext = '.' + ext;    
+    var acceptableExtensions = ['.shp', '.shx', '.dbf', '.prj', '.sbn', '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs', '.mxs', '.atx', '.xml', '.cpg', '.qix', '.shp.xml'];
+    return acceptableExtensions.some(function(v) {
+        return ext.match(v + '$');
+    });
+}
+
+function _isFlatFileExtension(ext) {
+    // ensure ext begins with a . ('.txt' not 'txt') 
     if(ext[0]!=='.') ext = '.' + ext;
-    
-    return (['.shp', '.shx', '.dbf', '.prj', '.sbn', '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs', '.mxs', '.atx', '.xml', '.cpg', '.qix'].indexOf(ext) > -1);
+    return ['.json', '.csv', '.geojson'].some(function(v) { 
+        return ext.match(v + '$');
+    });
 }
 
 function cachedFileLocation(source, cachedir){
@@ -222,18 +229,23 @@ function unzipCache(source, cachedir, callback) {
         .pipe(unzip.Parse())
         .on('entry', function(entry){
 
-            var extension = path.extname(entry.path);            
+            // cannot use path.extname() because of extensions like .shp.xml
+            var pathParts = path.basename(entry.path).split(path.sep);
+            pathParts = pathParts[pathParts.length-1].split('.')
+            pathParts.shift()
+            var extension = pathParts.join('.')
+            if (extension[0] !== '.') extension = '.' + extension;
 
             var entryExistsWithinSourceFilePath = source.conform.file && (entry.path.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
 
-            // ## skip directories entirely
+            // skip directories entirely
             if (entry.type === 'Directory') {
                 entry.autodrain();
             }            
-            // ## CSV/JSON
-            // IF NOT source.conform.file, take first JSON/CSV, error on multiple
-            // IF source.conform.file, only take correct path
-            else if ((['.json', '.geojson', '.csv'].indexOf(extension) > -1) && (!source.conform.file || (source.conform.file && (source.conform.file===entry.path)))) {
+            // IF CSV/JSON THEN
+            //    - IF NOT source.conform.file specified, take first JSON/CSV, error on multiple
+            //    - IF source.conform.file specified, only take that path
+            else if (_isFlatFileExtension(extension) && (!source.conform.file || (source.conform.file && (source.conform.file===entry.path)))) {
                 debug('queueing ' + entry.path + ' for decompression');
 
                 if(!source.conform.file) {
@@ -244,15 +256,16 @@ function unzipCache(source, cachedir, callback) {
                 var outpath = cachedir + source.id + '.' + source.conform.type;
                 q.push({entry: entry, outpath: outpath});
             }
-            // ## Shapefile
-            // IF NOT source.conform.file, take first shapefile, error on multiple
-            // check if entry is party of specific shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
-            else if (isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
+            // IF Shapefile THEN
+            //    - IF NOT source.conform.file specified, take first shapefile, error on multiple
+            //    - IF source.conform.file specified, check if entry is party of that shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
+            else if (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
                 debug('queueing ' + entry.path + ' for decompression');
 
+                // .shp must be present, so we'll count those to keep track of overall #
                 if(!source.conform.file && (extension === '.shp')) {
                     matchingFiles.push(entry.path);
-                    if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
+                    if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible shapefiles: ' + matchingFiles.join(', ');
                 }
             
                 var outpath = cachedir + source.id + '/' + source.id + extension;
@@ -264,8 +277,13 @@ function unzipCache(source, cachedir, callback) {
             }
         })
         .on('finish', function() {
-            debug('Decompression complete');
-            callback();
+            // all unzip tasks have been queued, we can safely set the drain function
+            // if we do it earlier it will fire multiple times as the queue
+            // repeatedly empties between refills
+            q.drain = function() {
+                debug('Decompression complete');
+                callback();    
+            }            
         });
 }
 
