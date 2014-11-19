@@ -204,6 +204,7 @@ exports.expand = function expand(loc, callback) {
         .pipe(outstream);        
 };
 
+
 //If the address is given as one field
 //This will take a given number of fields as the number address (numFields)
 //numFields defaults to 1
@@ -274,4 +275,3 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         .pipe(stringifier)
         .pipe(outstream);
 };
-
