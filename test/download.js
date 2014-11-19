@@ -5,7 +5,7 @@ var test = require('tape'),
     debug = require('debug'),
     async = require('async');
 
-test('Download test', function(t) {
+test('Download/unzip test', function(t) {
     debug.enable('conform:*');
 
     t.plan(5);
@@ -20,41 +20,44 @@ test('Download test', function(t) {
 
     // zipped shapefile
     testSeries.push(function(callback) {
-        debug('downloading us-wa-snohmish');
-        conform.downloadCache(conform.loadSource('./test/fixtures/us-wa-snohmish.json'), cachedir, function(){        
-            debug('us-wa-snohmish.json download completed');
-            t.assert(fs.existsSync(cachedir + '/us-wa-snohmish.zip'), 'Zipfile downloaded successfully');
-            t.assert(['./test/tmp/us-wa-snohmish/us-wa-snohmish.dbf',
-            './test/tmp/us-wa-snohmish/us-wa-snohmish.prj',
-            './test/tmp/us-wa-snohmish/us-wa-snohmish.shp',
-            './test/tmp/us-wa-snohmish/us-wa-snohmish.shx',
-            './test/tmp/us-wa-snohmish/us-wa-snohmish.xml'].every(function(f){
+        debug('downloading us-wa-snohmish-test');
+        conform.downloadCache(conform.loadSource('./test/fixtures/us-wa-snohmish-test.json'), cachedir, function(){        
+            debug('us-wa-snohmish-test.json download completed');
+            t.assert(fs.existsSync(cachedir + '/us-wa-snohmish-test.zip'), 'Zipfile downloaded successfully');
+            t.assert(['./test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.dbf',
+            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.prj',
+            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.shp',
+            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.shx',
+            './test/tmp/us-wa-snohmish-test/us-wa-snohmish-test.xml'].every(function(f){
                 return fs.existsSync(f);
-            }), 'us-wa-snohmish shapefile components extracted successfully');
+            }), 'us-wa-snohmish-test shapefile components extracted successfully');
             callback();
         });
     });
 
     // unzipped geojson
     testSeries.push(function(callback) {
-        debug('downloading us-wy-albany');
-        conform.downloadCache(conform.loadSource('./test/fixtures/us-wy-albany.json'), cachedir, function() {
-            debug('us-wy-albany download completed');            
-            t.assert(fs.existsSync(cachedir + '/us-wy-albany.json'), 'us-wy-albany JSON downloaded successfully');
+        debug('downloading us-wy-albany-test');
+        conform.downloadCache(conform.loadSource('./test/fixtures/us-wy-albany-test.json'), cachedir, function() {
+            debug('us-wy-albany-test download completed');            
+            t.assert(fs.existsSync(cachedir + '/us-wy-albany-test.json'), 'us-wy-albany-test JSON downloaded successfully');
             callback();
         });
     });
 
     // zipped CSV
     testSeries.push(function(callback) {
-        debug('downloading us-or-portland');
-        conform.downloadCache(conform.loadSource('./test/fixtures/us-or-portland.json'), cachedir, function() {
-            debug('us-or-portland download completed');
-            t.assert(fs.existsSync(cachedir + '/us-or-portland.zip'), 'us-or-portland zipfile downloaded successfully');            
-            t.assert(fs.existsSync(cachedir + '/us-or-portland.csv'), 'us-or-portland CSV downloaded successfully');
+        debug('downloading us-or-portland-test');
+        conform.downloadCache(conform.loadSource('./test/fixtures/us-or-portland-test.json'), cachedir, function() {
+            debug('us-or-portland-test download completed');
+            t.assert(fs.existsSync(cachedir + '/us-or-portland-test.zip'), 'us-or-portland-test zipfile downloaded successfully');            
+            t.assert(fs.existsSync(cachedir + '/us-or-portland-test.csv'), 'us-or-portland-test CSV downloaded successfully');
             callback();
         });
     });
 
-    async.series(testSeries);
+    async.series(testSeries, function() {
+        // cleanup
+        rimraf(cachedir);
+    });
 });
