@@ -217,34 +217,34 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
 
     col = col.toLowerCase();
 
-    var fs = require('fs'),
-        readline = require('readline'),
-        stream = require('stream');
-  
-    var instream = fs.createReadStream(loc),
-        outstream = new stream(),
-        rl = readline.createInterface(instream, outstream);
+    var instream = fs.createReadStream(loc);
+    var outstream = fs.createWriteStream('./tmp.csv');
 
-    var linenum = 1,
-        element, //Stores the element # to split
+    var stringifier = stringify();
+    var parser = parse({ relax: true });
+    parser.on('error', function(err) {
+        debug(err);    
+    });
+
+    var linenum = 0,
+        elementToSplit, //Stores the element # to split
         length; //Stores start position of auto_num
 
-    rl.on('line', function(line) {
-        var elements = line.split(',');
-    
-        if (linenum == 1){
-            fs.appendFileSync('./tmp.csv', elements+ ',auto_number,auto_street\n'); //Write Headers
-            length = elements.length + 1; //Stores index of auto_num
-      
-            for (var i = 0; i < elements.length; i++){
-                col = col;
-                
-                if (col == elements[i].toLowerCase())
-                element = i;
-            }
-        } else {
-            if (elements[element]) {
-                var token = elements[element].split(' ');
+    var transformer = transform(function(data) {
+        linenum++;
+        if (linenum === 1) {
+            elementToSplit = data.map(function(x) { return x.toLowerCase() }).indexOf(col);
+
+            length = data.length + 1;
+
+            data.push('auto_number');
+            data.push('auto_street');            
+
+            return data;
+        }
+        else {
+            if(data[elementToSplit]) {
+                var token = data[elementToSplit].split(' ');
                 var street = token[numFields];
                 var number = token[0];
         
@@ -256,18 +256,22 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
                     street = street + " " + token[str];
                 }
           
-                elements[length - 1] = number;
-                elements[length] = street;
-                fs.appendFileSync('./tmp.csv', elements + '\n');
+                data[length - 1] = number;
+                data[length] = street;
+                return data;                
             }
         }
-
-        linenum++;
     });
 
-    rl.on('close', function() {
+    outstream.on('close', function() {
         fs.rename('./tmp.csv', loc, function(err) {
             callback(err);
         });
     });
+
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream);
 };
