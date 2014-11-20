@@ -4,7 +4,7 @@ var fs = require('fs'),
 
 module.exports.utf8 = function(source, cachedir, callback) {
     var debug = require('debug')('conform:utf8');
-    debug('Changing encoding from ' + source.encoding);
+    debug('Changing encoding from ' + source.conform.encoding);
 
     var loc = cachedir + source.id + '.' + conform.fileTypeExtensions[source.conform.type];
 
@@ -17,5 +17,5 @@ module.exports.utf8 = function(source, cachedir, callback) {
         });
     });
 
-    instream.pipe(iconv.decodeStream(source.encoding)).pipe(outstream);
+    instream.pipe(iconv.decodeStream(source.conform.encoding)).pipe(outstream);
 }

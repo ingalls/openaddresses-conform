@@ -158,18 +158,18 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
     var transformer = transform(function(data) {
         linenum++;
 
-        if (linenum === source.headers) {
+        if (linenum === source.conform.headers) {
             lowerData = data.map(function(x) { return x.toLowerCase(); } );            
-            Object.outFields(source.advanced_merge).forEach(function(outField) {
+            Object.keys(source.conform.advanced_merge).forEach(function(outField) {
                 merges[outField] = [];
-                source.advanced_merge[outField].fields.forEach(function(inField) {
+                source.conform.advanced_merge[outField].fields.forEach(function(inField) {
                     merges[outField].push(lowerData.indexOf(inField.toLowerCase()));
                 });
                 data.push(outField);
             });
             return data;
         }
-        else if(linenum > source.skip) {
+        else if(linenum > source.conform.skip) {
             Object.keys(merges).forEach(function(outField) {
                 var pieces = [];
                 merges[outField].forEach(function(inField) {
@@ -177,7 +177,7 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
                     if (inFieldIndex !== -1)
                         pieces.push(data[inFieldIndex]);                
                 });
-                data.push(pieces.join(source.advanced_merge[outField].separator));
+                data.push(pieces.join(source.conform.advanced_merge[outField].separator));
             });
             return data;
         } 

@@ -366,7 +366,7 @@ function conformCache(source, cachedir, callback){
 
         // Advanced merge columns
         function(cb) {
-            if(source.advanced_merge)
+            if(source.conform.advanced_merge)
                 csv.advancedMerge(source, cachedir, cb);
             else
                 cb();
