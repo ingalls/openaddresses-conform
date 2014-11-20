@@ -8,7 +8,7 @@ var test = require('tape'),
 test('Download/unzip test', function(t) {
     debug.enable('conform:*');
 
-    t.plan(7);
+    t.plan(9);
 
     var cachedir = './test/tmp';
     rimraf.sync(cachedir);    
@@ -32,6 +32,27 @@ test('Download/unzip test', function(t) {
                 cachedir + '/us-wa-snohmish-test/us-wa-snohmish-test.shp.xml'].every(function(f){
                 return fs.existsSync(f);
             }), 'us-wa-snohmish-test shapefile components extracted successfully');
+            callback();
+        });
+    });
+
+    // zipped shapefile with flat zip structure
+    testSeries.push(function(callback) {
+        debug('downloading us-ca-alameda_county-test');
+        conform.downloadCache(conform.loadSource('./test/fixtures/us-ca-alameda_county-test.json'), cachedir, function(){        
+            debug('us-ca-alameda_county-test.json download completed');
+            t.assert(fs.existsSync(cachedir + '/us-ca-alameda_county-test.zip'), 'us-ca-alameda_county-test zipfile downloaded successfully');
+            t.assert([
+                cachedir + '/us-ca-alameda_county-test/us-ca-alameda_county-test.dbf',
+                cachedir + '/us-ca-alameda_county-test/us-ca-alameda_county-test.prj',
+                cachedir + '/us-ca-alameda_county-test/us-ca-alameda_county-test.qix',
+                cachedir + '/us-ca-alameda_county-test/us-ca-alameda_county-test.shx',
+                cachedir + '/us-ca-alameda_county-test/us-ca-alameda_county-test.shp',
+                cachedir + '/us-ca-alameda_county-test/us-ca-alameda_county-test.shp.xml',
+                cachedir + ''
+            ].every(function(f){
+                return fs.existsSync(f);
+            }), 'us-ca-alameda_county-test shapefile components extracted successfully');
             callback();
         });
     });
