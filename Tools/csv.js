@@ -4,10 +4,13 @@ var fs = require('fs'),
     parse = require('csv-parse'),
     stringify = require('csv-stringify');
 
-exports.dropCol = function dropCol(keep, loc, callback){
+exports.dropCol = function dropCol(source, cachedir, callback){
     var debug = require('debug')('conform:dropCol');
 
     debug("Dropping Unnecessary Data");
+
+    var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
+    var loc = cachedir + source.id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -30,7 +33,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
     var transformer = transform(function(data) {
         linenum++;
 
-        if(linenum === 1) {
+        if(linenum === source.headers) {
             keep = keep.map(function(x) { return x.toLowerCase(); });
             data = data.map(function(x) { return x.toLowerCase(); });
             for (var i = 0; i < data.length; i++){            
@@ -46,7 +49,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
 
             return ['LON','LAT','NUMBER','STREET'];
         }
-        else {
+        else if (linenum > source.skip) {
             return [
                 data[keepCols.lon],
                 data[keepCols.lat],
@@ -54,6 +57,8 @@ exports.dropCol = function dropCol(keep, loc, callback){
                 data[keepCols.str]
             ];
         }
+        else
+            return null;
     });    
 
     outstream.on('close', function() {
@@ -70,9 +75,12 @@ exports.dropCol = function dropCol(keep, loc, callback){
 };
 
 //Joins Columns in order that they are given in array into 'auto_street' column
-exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
+exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
     var debug = require('debug')('conform:mergeStreetName');
     debug("Merging Columns");
+
+    var cols = source.conform.merge.slice(0);
+    var loc = cachedir + source.id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -92,7 +100,7 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
     var transformer = transform(function(data) {
         linenum++;
 
-        if (linenum === 1) {
+        if (linenum === source.headers) {
             lowerData = data.map(function(x) { return x.toLowerCase(); } );            
             cols.forEach(function(name, i) {
                 mergeIndices.push(lowerData.indexOf(name.toLowerCase()));
@@ -100,13 +108,82 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
             data.push('auto_street');
             return data;
         }
-        else {
+        else if(linenum > source.skip) {
             var pieces = [];
             mergeIndices.forEach(function(index) {
                 pieces.push(data[index]);
             });
             data.push(pieces.join(' '));
             return data;
+        }
+        else
+            return null;
+    });
+    
+    outstream.on('close', function() {
+        fs.rename('./tmp.csv', loc, function(err){
+            callback(err);
+        });
+    });
+
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream); 
+};
+
+// joins arbitrary number of columns into new ones
+exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
+    var debug = require('debug')('conform:advancedMerge');
+    debug("Advanced-merging Columns");
+
+    var loc = cachedir + source.id + "/out.csv";
+
+    if (fs.exists('./tmp.csv'))
+        fs.unlinkSync('./tmp.csv');
+
+    var instream = fs.createReadStream(loc);
+    var outstream = fs.createWriteStream('./tmp.csv');
+
+    var stringifier = stringify();
+    var parser = parse({ relax: true });
+    parser.on('error', function(err) {
+        debug(err);    
+    });
+
+    var linenum = 0;
+    var merges = {};
+
+    var transformer = transform(function(data) {
+        linenum++;
+
+        if (linenum === source.headers) {
+            lowerData = data.map(function(x) { return x.toLowerCase(); } );            
+            Object.outFields(source.advanced_merge).forEach(function(outField) {
+                merges[outField] = [];
+                source.advanced_merge[outField].fields.forEach(function(inField) {
+                    merges[outField].push(lowerData.indexOf(inField.toLowerCase()));
+                });
+                data.push(outField);
+            });
+            return data;
+        }
+        else if(linenum > source.skip) {
+            Object.keys(merges).forEach(function(outField) {
+                var pieces = [];
+                merges[outField].forEach(function(inField) {
+                    var inFieldIndex = merges[outField][inField];
+                    if (inFieldIndex !== -1)
+                        pieces.push(data[inFieldIndex]);                
+                });
+                data.push(pieces.join(source.advanced_merge[outField].separator));
+            });
+            return data;
+        } 
+        else {
+            // skip this record
+            return null;
         }
     });
     
@@ -122,6 +199,7 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         .pipe(stringifier)
         .pipe(outstream); 
 };
+
 
 // this function is @ingalls' code -- I haven't touched it because it's magic --@sbma44
 // do substitutions 
@@ -168,9 +246,11 @@ function _expandElements(elements) {
     return elements;
 }
 
-exports.expand = function expand(loc, callback) {
+exports.expand = function expand(source, cachedir, callback) {
     var debug = require('debug')('conform:expand');
-            
+           
+    var loc = cachedir + source.id + "/out.csv";
+
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
     
@@ -188,7 +268,7 @@ exports.expand = function expand(loc, callback) {
         if (linenum % 10000 === 0)
             debug('Processed Addresses: ' + linenum);
 
-        return (linenum === 1) ? data : _expandElements(data);
+        return (linenum > source.skip) ? data : _expandElements(data);
     });
 
     outstream.on('close', function() {
@@ -210,12 +290,14 @@ exports.expand = function expand(loc, callback) {
 //numFields defaults to 1
 //and use the remainder as the street address
 //Creates two new columns called auto_num & auto_str
-exports.splitAddress = function splitAddress(col, numFields, loc, callback){
+exports.splitAddress = function splitAddress(source, cachedir, callback){
     var debug = require('debug')('conform:splitAddress');
 
     debug('Splitting Address Column');
 
-    col = col.toLowerCase();
+    var col = source.conform.split.toLowerCase();
+    var numFields = 1;
+    var loc = cachedir + source.id + "/out.csv";
 
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
@@ -232,7 +314,7 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
 
     var transformer = transform(function(data) {
         linenum++;
-        if (linenum === 1) {
+        if (linenum === source.headers) {
             elementToSplit = data.map(function(x) { return x.toLowerCase() }).indexOf(col);
 
             length = data.length + 1;
@@ -242,7 +324,7 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
 
             return data;
         }
-        else {
+        else if (linenum > source.skip) {
             if(data[elementToSplit]) {
                 var token = data[elementToSplit].split(' ');
                 var street = token[numFields];
@@ -261,6 +343,8 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
                 return data;                
             }
         }
+        else
+            return null;
     });
 
     outstream.on('close', function() {

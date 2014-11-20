@@ -30,6 +30,7 @@
     "fstream": "^0.1.25",
     "geojson-stream": "0.0.0",
     "iconv": "^2.1.4",
+    "iconv-lite": "^0.4.4",
     "minimist": "0.0.8",
     "progress": "~1.1.4",
     "request": "~2.34.0",

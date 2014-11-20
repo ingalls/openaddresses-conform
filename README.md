@@ -35,6 +35,23 @@ Conform data can be found in the source files of the openaddresses project. Conf
 
 `merge=["one", "two", ..., "nth"]` The merge tag will merge several columns together. This is typically soemthing along the lines of street-name and street-type columns. The merged column will be named `auto_street`
 
+`advanced_merge` Can be used to merge fields more arbitrarily. This is sometimes necessary for the street number equivalent in Asian addressing systems. The following example will add columns to the output CSV named `custom_number` and `auto_street` that contained merged contents of the forms `STREET_A-STREET_B-STREET_C` and `ROAD_A ROAD_B`, respectively:
+
+```
+"conform": {            
+    "advanced_merge": {
+        "custom_number": {
+            "separator": "-",
+            "fields": ["STREET_A", "STREET_B", "STREET_C"]
+        },
+        "auto_street": {
+            "separator": " ",
+            "fields": ["ROAD_A", "ROAD_B"]
+        }
+    }
+}
+```
+
 `split` Some databases give the number and street in one column. The split tag will split the number and the street. The resulting columns will be `auto_street` and `auto_number`.
 
 `lon` The longitude column. Due to the way the conversion scripts work this is currently always going to be `x`.
@@ -50,6 +67,12 @@ Conform data can be found in the source files of the openaddresses project. Conf
 `file` The majority of zips contain a single shapefile. Sometimes zips will contain multiple files, or the shapefile that is needed is located in a folder
 hierarchy in the zip. Since the program only supports determining single shapefiles not in a subfolder, file can be used to point the program to an exact file.
 The proper syntax would be `"file": "addresspoints/address.shp"` if the file was under a single subdirectory called `addresspoints`. Note there is no preceding forward slash.
+
+`charset` a character encoding from which an input file will first be converted (into utf-8). Must be recognizable by iconv.
+
+`headers` (conform.type==='csv' only) some non-latin CSVs provide header lines in native script and in latin characters. If specified, this field determines which line will be used to determine column names for other conform fields. If not specified, row 1 is assumed.
+
+`skip` (conform.type==='csv' only) may be used in conjunction with `headers` (see above).  For example, if `headers` is 1 but a second header line exists and must be skipped.
 
 It should be noted that during the conversion, all column names are lowercased and stripped of newline characters and commas are converted to spaces.
 

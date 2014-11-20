@@ -104,6 +104,20 @@ function ConformCLI(){
 function loadSource(sourcefile) {    
     var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
     source.id = path.basename(sourcefile, '.json');
+    if(typeof source.headers === 'undefined') {
+        source.headers = 1;
+        source.skip = 1;
+    }
+    else {
+        source.headers = parseInt(source.headers);
+        if (typeof source.skip === 'undefined')
+            source.skip = source.headers;        
+        else {
+            source.skip = parseInt(source.skip);
+            if (source.skip < source.headers) throw 'Cannot skip fewer lines than the header line\'s location';
+        }
+    }
+    
     return source;
 }
 
@@ -309,7 +323,20 @@ function conformCache(source, cachedir, callback){
     var csv = require('./Tools/csv');
 
     async.series([
-        function(cb) { //Convert to CSV
+
+        // convert to utf-8
+        function(cb) {
+            var encoding = require('./Tools/encoding');
+            if(source.conform.encoding && (['geojson', 'csv'].indexOf(source.conform.type) > -1)) 
+                encoding.utf8(source, cachedir, function(err) {
+                    cb(err);
+                });
+            else
+                cb();
+        },
+
+        //Convert to CSV
+        function(cb) { 
             var convert = require('./Tools/convert');
 
             var s_srs = source.conform.srs ? source.conform.srs : false;
@@ -332,29 +359,36 @@ function conformCache(source, cachedir, callback){
             if (source.conform.test) // Stops at converting to find col names
                 process.exit(0);
             if (source.conform.merge)
-                csv.mergeStreetName(source.conform.merge.slice(0), cachedir + source.id + "/out.csv", cb);
+                csv.mergeStreetName(source, cachedir, cb);
             else
                 cb();
         }, 
+
+        // Advanced merge columns
+        function(cb) {
+            if(source.advanced_merge)
+                csv.advancedMerge(source, cachedir, cb);
+            else
+                cb();
+        },
 
         // Split Address Columns            
         function(cb) { 
             var csv = require('./Tools/csv');
             if (source.conform.split)
-                csv.splitAddress(source.conform.split, 1, cachedir + source.id + "/out.csv", cb);
+                csv.splitAddress(source, cachedir, cb);
             else
                 cb();
         }, 
 
         // Drop Columns
-        function(cb) { 
-            var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
-            csv.dropCol(keep, cachedir + source.id + "/out.csv", cb);
+        function(cb) {         
+            csv.dropCol(source, cachedir, cb);
         }, 
 
         // Expand Abbreviations, Fix Capitalization & drop null rows            
         function(cb) { 
-            csv.expand(cachedir + source.id + "/out.csv", cb);
+            csv.expand(source, cachedir, cb);
         }], 
 
         function(err, results) {
@@ -409,7 +443,8 @@ function updateCache(source, cachedir) {
 module.exports = {
     downloadCache: downloadCache,
     main: main,
-    loadSource: loadSource
+    loadSource: loadSource,
+    fileTypeExtensions: fileTypeExtensions
 }
 
 if (require.main === module) { ConformCLI(); }
