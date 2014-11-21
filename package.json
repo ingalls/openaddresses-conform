@@ -38,7 +38,6 @@
     "stream": "0.0.1",
     "stream-transform": "0.0.6",
     "tape": "^3.0.3",
-    "unzip": "~0.1.9",
     "xml2js": "0.4.4",
     "xmlbuilder": "2.4.4"
   },

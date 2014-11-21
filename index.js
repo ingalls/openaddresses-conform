@@ -5,7 +5,6 @@ var argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
     path = require('path'),
     ProgressBar = require('progress'),
-    unzip = require('unzip'),
     request = require('request'),
     AWS = require('aws-sdk'),    
     async = require('async'),
@@ -236,76 +235,77 @@ function unzipCache(source, cachedir, unzipCallback) {
 
     if(!fs.existsSync(unzipDirectory)) fs.mkdirSync(unzipDirectory);
 
-    fs
-        .createReadStream(cachedir + source.id + '.' + source.compression)
-        .pipe(unzip.Extract({path: unzipDirectory}))
-        .on('close', function() {            
-            // track the number of output files we encounter. 
-            // if >1, our path scheme is not gonna work
-            matchingFiles = [];
-            recursive(unzipDirectory, function (err, files) {                              
-                var qtasks = [];
-                files.forEach(function(archiveFilename) {
-                    
-                    // cannot use path.extname() because of extensions like .shp.xml
-                    var pathParts = path.basename(archiveFilename).split(path.sep);
-                    pathParts = pathParts[pathParts.length-1].split('.')
-                    pathParts.shift()
-                    var extension = pathParts.join('.')
-                    if (extension[0] !== '.') extension = '.' + extension;
+    // node-unzip is garbage, we need to shell out :-(
+    var sh = require('execSync');
+    sh.run('unzip -o -d ' + unzipDirectory + ' ' + cachedir + source.id + '.' + source.compression);
 
-                    var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
-                            
-                    // IF CSV/JSON THEN
-                    //    - IF NOT source.conform.file specified, take first JSON/CSV, error on multiple
-                    //    - IF source.conform.file specified, only take that path
-                    if (_isFlatFileExtension(extension) && (!source.conform.file || (source.conform.file && (source.conform.file===archiveFilename)))) {
+    process.nextTick(function() {            
+        // track the number of output files we encounter. 
+        // if >1, our path scheme is not gonna work
+        matchingFiles = [];
+        recursive(unzipDirectory, function (err, files) {                              
+            var qtasks = [];
+            files.forEach(function(archiveFilename) {
+                
+                // cannot use path.extname() because of extensions like .shp.xml
+                var pathParts = path.basename(archiveFilename).split(path.sep);
+                pathParts = pathParts[pathParts.length-1].split('.')
+                pathParts.shift()
+                var extension = pathParts.join('.')
+                if (extension[0] !== '.') extension = '.' + extension;
+
+                var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
                         
-                        debug('saving file ' + archiveFilename);
-
-                        if(!source.conform.file) {
-                            matchingFiles.push(archiveFilename);
-                            if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
-                        }
-
-                        var outpath = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];                        
-                        qtasks.push({in: archiveFilename, out: outpath});
-                    }
-                    // IF Shapefile THEN
-                    //    - IF NOT source.conform.file specified, take first shapefile, error on multiple
-                    //    - IF source.conform.file specified, check if entry is party of that shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
-                    else if (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
-
-                        debug('saving file ' + archiveFilename);
-
-                        // .shp must be present, so we'll count those to keep track of overall #
-                        if(!source.conform.file && (extension === '.shp')) {
-                            matchingFiles.push(archiveFilename);
-                            if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible shapefiles: ' + matchingFiles.join(', ');
-                        }
+                // IF CSV/JSON THEN
+                //    - IF NOT source.conform.file specified, take first JSON/CSV, error on multiple
+                //    - IF source.conform.file specified, only take that path
+                if (_isFlatFileExtension(extension) && (!source.conform.file || (source.conform.file && (source.conform.file===archiveFilename)))) {
                     
-                        var outpath = cachedir + source.id + '/' + source.id + extension;                        
-                        qtasks.push({in: archiveFilename, out: outpath});             
-                    }
-                    else {                        
-                        qtasks.push({in: archiveFilename, rm: true});
-                    }      
+                    debug('saving file ' + archiveFilename);
 
-                });
-               
-                // create queue & iterate through tasks for extracted files
-                var q = async.queue(function(task, qcallback) {
-                    if(task.rm)
-                        fs.unlink(task.in, qcallback);
-                    else
-                        fs.rename(task.in, task.out, qcallback);                
-                }, 1);
-                q.push(qtasks);
-                q.drain = function() {
-                    rimraf(unzipDirectory, unzipCallback);
-                };                
+                    if(!source.conform.file) {
+                        matchingFiles.push(archiveFilename);
+                        if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
+                    }
+
+                    var outpath = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];                        
+                    qtasks.push({in: archiveFilename, out: outpath});
+                }
+                // IF Shapefile THEN
+                //    - IF NOT source.conform.file specified, take first shapefile, error on multiple
+                //    - IF source.conform.file specified, check if entry is party of that shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
+                else if (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
+
+                    debug('saving file ' + archiveFilename);
+
+                    // .shp must be present, so we'll count those to keep track of overall #
+                    if(!source.conform.file && (extension === '.shp')) {
+                        matchingFiles.push(archiveFilename);
+                        if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible shapefiles: ' + matchingFiles.join(', ');
+                    }
+                
+                    var outpath = cachedir + source.id + '/' + source.id + extension;                        
+                    qtasks.push({in: archiveFilename, out: outpath});             
+                }
+                else {                        
+                    qtasks.push({in: archiveFilename, rm: true});
+                }      
+
             });
+           
+            // create queue & iterate through tasks for extracted files
+            var q = async.queue(function(task, qcallback) {
+                if(task.rm)
+                    fs.unlink(task.in, qcallback);
+                else
+                    fs.rename(task.in, task.out, qcallback);                
+            }, 1);
+            q.push(qtasks);
+            q.drain = function() {
+                rimraf(unzipDirectory, unzipCallback);
+            };                
         });
+    });
 }
 
 function conformCache(source, cachedir, callback){
