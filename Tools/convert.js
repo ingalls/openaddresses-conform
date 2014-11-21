@@ -2,7 +2,8 @@ var fs = require('fs'),
     async = require('async'),
     transform = require('stream-transform'),
     parse = require('csv-parse'),
-    stringify = require('csv-stringify');
+    stringify = require('csv-stringify'),
+    fileTypeExtensions = require('./filetype-extensions.json');
 
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
     var debug = require('debug')('conform:polyshp2csv');
@@ -177,10 +178,15 @@ exports.json2csv = function json2csv(file, callback) {
     });
 }
 
-exports.csv = function(source, cachedir, extension, callback) {    
+exports.csv = function(source, cachedir, callback) {    
     var debug = require('debug')('conform:csv');
 
-    var filename = cachedir + source.id; + '.' + extension; // eg /tmp/openaddresses/us-va-arlington.csv
+    debug('Cleaning up CSV');
+
+    if(!fs.existsSync(cachedir + source.id + '/')) fs.mkdirSync(cachedir + source.id);
+
+    var filename = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type]; // eg /tmp/openaddresses/us-va-arlington.csv
+    var outFilename = cachedir + source.id + '/out.csv';
 
     var instream = fs.createReadStream(filename);
     var outstream = fs.createWriteStream('./tmp.csv');
@@ -208,7 +214,7 @@ exports.csv = function(source, cachedir, extension, callback) {
     });
     
     outstream.on('close', function() {
-        fs.rename('./tmp.csv', filename, function(err){
+        fs.rename('./tmp.csv', outFilename, function(err){
             callback(err);
         });
     });

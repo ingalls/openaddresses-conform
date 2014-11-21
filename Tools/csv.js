@@ -5,7 +5,7 @@ var fs = require('fs'),
     stringify = require('csv-stringify');
 
 exports.dropCol = function dropCol(source, cachedir, callback){
-    var debug = require('debug')('conform:dropCol');
+    var debug = require('debug')('conform:csv:dropCol');
 
     debug("Dropping Unnecessary Data");
 
@@ -74,7 +74,7 @@ exports.dropCol = function dropCol(source, cachedir, callback){
 
 //Joins Columns in order that they are given in array into 'auto_street' column
 exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
-    var debug = require('debug')('conform:mergeStreetName');
+    var debug = require('debug')('conform:csv:mergeStreetName');
     debug("Merging Columns");
 
     var cols = source.conform.merge.slice(0);
@@ -131,7 +131,7 @@ exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
 
 // joins arbitrary number of columns into new ones
 exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
-    var debug = require('debug')('conform:advancedMerge');
+    var debug = require('debug')('conform:csv:advancedMerge');
     debug("Advanced-merging Columns");
 
     var loc = cachedir + source.id + "/out.csv";
@@ -266,7 +266,7 @@ function _expandElements(elements) {
 }
 
 exports.expand = function expand(source, cachedir, callback) {
-    var debug = require('debug')('conform:expand');
+    var debug = require('debug')('conform:csv:expand');
            
     var loc = cachedir + source.id + "/out.csv";
 
@@ -310,7 +310,7 @@ exports.expand = function expand(source, cachedir, callback) {
 //and use the remainder as the street address
 //Creates two new columns called auto_num & auto_str
 exports.splitAddress = function splitAddress(source, cachedir, callback){
-    var debug = require('debug')('conform:splitAddress');
+    var debug = require('debug')('conform:csv:splitAddress');
 
     debug('Splitting Address Column');
 
@@ -378,18 +378,42 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
 };
 
 exports.reproject = function(source, cachedir, callback) {
-    // 1. move out.csv to subdirectory (`subdir/out.csv`)
-    // 2. write vrt
-    // 3. call `ogr2ogr -f CSV out.csv out.vrt -lco GEOMETRY=AS_XY -t_srs EPSG:4326 -s_srs NAD83 -overwrite`
-    // 4. unlink `subdir/out.csv`
-    // 5. discard old columns?
+    var sh = require('execSync');
+    var debug = require('debug')('conform:csv:reproject');
 
+    debug('reprojecting CSV from ' + source.conform.srs);
+
+    var dir = cachedir + source.id + '/';
+
+    // move input csv
+    if(!fs.existsSync(dir + 'tmp'))
+        fs.mkdirSync(dir + 'tmp');
+    fs.renameSync(dir + 'out.csv', dir + 'tmp/out.csv');
+    
+    // write VRT
     var vrt = '<OGRVRTDataSource>\
     <OGRVRTLayer name="out">\
-        <SrcDataSource>subdir/out.csv</SrcDataSource>\
+        <SrcDataSource>' + dir + 'tmp/out.csv</SrcDataSource>\
         <GeometryType>wkbPoint</GeometryType>\
-        <LayerSRS>NAD83</LayerSRS>\
+        <LayerSRS>' + source.conform.srs + '</LayerSRS>\
         <GeometryField encoding="PointFromColumns" x="LON" y="LAT"/>\
     </OGRVRTLayer>\
-</OGRVRTDataSource>';
+</OGRVRTDataSource>'
+    fs.writeFileSync(dir + 'out.vrt', vrt);
+
+    // reproject
+    sh.run('ogr2ogr -f CSV ' + dir + 'out.csv ' + dir + 'out.vrt -lco GEOMETRY=AS_XY -t_srs EPSG:4326 -overwrite');
+
+    // clean up files
+    fs.unlinkSync(dir + 'out.vrt');
+    fs.unlinkSync(dir + 'tmp/out.csv');
+    fs.rmdirSync(dir + 'tmp');
+
+    // drop old columns
+    var tmpSource = JSON.parse(JSON.stringify(source));
+    tmpSource.conform.lon = 'X';
+    tmpSource.conform.lat = 'Y';
+    tmpSource.conform.number = 'NUMBER';
+    tmpSource.conform.street = 'STREET';
+    exports.dropCol(tmpSource, cachedir, callback);    
 };

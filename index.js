@@ -220,16 +220,19 @@ function downloadCache(source, cachedir, callback) {
                     .on('data', function(chunk) {
                         if (bar) bar.tick(chunk.length);
                     });
-            }
-            stream.on('end', function() {
-                    if (source.compression)
-                        unzipCache(source, cachedir, callback);
-                    else
-                        callback();
-                });
+            }            
 
             var downloadDestination = cachedir + source.id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
-            stream.pipe(fs.createWriteStream(downloadDestination));
+
+            var outstream = fs.createWriteStream(downloadDestination);
+            outstream.on('finish', function() {
+                if (source.compression)
+                    unzipCache(source, cachedir, callback);
+                else
+                    callback();
+            });
+
+            stream.pipe(outstream);
 
         } else {
             debug("Cached file exists, skipping download");
@@ -361,7 +364,7 @@ function conformCache(source, cachedir, callback){
             else if (source.conform.type === "geojson")
                 convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
             else if (source.conform.type === "csv") {
-                convert.csv(source, cachedir, fileTypeExtensions[source.conform.type], cb);
+                convert.csv(source, cachedir, cb);
             } 
             else
                 cb();                
@@ -397,7 +400,16 @@ function conformCache(source, cachedir, callback){
         // Drop Columns
         function(cb) {         
             csv.dropCol(source, cachedir, cb);
-        }, 
+        },
+
+        // reproject CSV
+        function(cb) {
+            if(source.conform.srs && (source.conform.type === 'csv')) {
+                csv.reproject(source, cachedir, cb);
+            }
+            else
+                cb();
+        },
 
         // Expand Abbreviations, Fix Capitalization & drop null rows            
         function(cb) { 
