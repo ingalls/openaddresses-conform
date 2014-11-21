@@ -49,16 +49,14 @@ exports.dropCol = function dropCol(source, cachedir, callback){
 
             return ['LON','LAT','NUMBER','STREET'];
         }
-        else if (linenum > source.conform.skiplines) {
+        else {
             return [
                 data[keepCols.lon],
                 data[keepCols.lat],
                 data[keepCols.num],
                 data[keepCols.str]
             ];
-        }
-        else
-            return null;
+        }        
     });    
 
     outstream.on('close', function() {
@@ -100,7 +98,7 @@ exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
     var transformer = transform(function(data) {
         linenum++;
 
-        if (linenum === source.headers) {
+        if (linenum === 1) {
             lowerData = data.map(function(x) { return x.toLowerCase(); } );            
             cols.forEach(function(name, i) {
                 mergeIndices.push(lowerData.indexOf(name.toLowerCase()));
@@ -108,7 +106,7 @@ exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
             data.push('auto_street');
             return data;
         }
-        else if(linenum > source.conform.skiplines) {
+        else {
             var pieces = [];
             mergeIndices.forEach(function(index) {
                 pieces.push(data[index]);
@@ -116,8 +114,6 @@ exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
             data.push(pieces.join(' '));
             return data;
         }
-        else
-            return null;
     });
     
     outstream.on('close', function() {
@@ -158,7 +154,7 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
     var transformer = transform(function(data) {
         linenum++;
 
-        if (linenum === source.conform.headers) {
+        if (linenum === 1) {
 
             lowerData = data.map(function(x) { return x.toLowerCase(); } );    
 
@@ -197,7 +193,7 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
 
             return data;
         }
-        else if(linenum > source.conform.skiplines) {
+        else {
             merges.forEach(function(merge) {
                 var pieces = [];
                 merge[2].forEach(function(inFieldIndex) {
@@ -208,10 +204,6 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
             
             return data;
         } 
-        else {
-            // skip this record
-            return null;
-        }
     });
     
     outstream.on('close', function() {
@@ -341,7 +333,7 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
 
     var transformer = transform(function(data) {
         linenum++;
-        if (linenum === source.headers) {
+        if (linenum === 1) {
             elementToSplit = data.map(function(x) { return x.toLowerCase() }).indexOf(col);
 
             length = data.length + 1;
@@ -351,7 +343,7 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
 
             return data;
         }
-        else if (linenum > source.conform.skiplines) {
+        else {
             if(data[elementToSplit]) {
                 var token = data[elementToSplit].split(' ');
                 var street = token[numFields];
@@ -370,8 +362,6 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
                 return data;                
             }
         }
-        else
-            return null;
     });
 
     outstream.on('close', function() {
@@ -385,4 +375,21 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
         .pipe(transformer)
         .pipe(stringifier)
         .pipe(outstream);
+};
+
+exports.reproject = function(source, cachedir, callback) {
+    // 1. move out.csv to subdirectory (`subdir/out.csv`)
+    // 2. write vrt
+    // 3. call `ogr2ogr -f CSV out.csv out.vrt -lco GEOMETRY=AS_XY -t_srs EPSG:4326 -s_srs NAD83 -overwrite`
+    // 4. unlink `subdir/out.csv`
+    // 5. discard old columns?
+
+    var vrt = '<OGRVRTDataSource>\
+    <OGRVRTLayer name="out">\
+        <SrcDataSource>subdir/out.csv</SrcDataSource>\
+        <GeometryType>wkbPoint</GeometryType>\
+        <LayerSRS>NAD83</LayerSRS>\
+        <GeometryField encoding="PointFromColumns" x="LON" y="LAT"/>\
+    </OGRVRTLayer>\
+</OGRVRTDataSource>';
 };
