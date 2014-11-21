@@ -220,13 +220,8 @@ function downloadCache(source, cachedir, callback) {
                     .on('data', function(chunk) {
                         if (bar) bar.tick(chunk.length);
                     });
-<<<<<<< HEAD
             }            
 
-=======
-            }
-            
->>>>>>> unzip-fix
             var downloadDestination = cachedir + source.id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
 
             var outstream = fs.createWriteStream(downloadDestination);
