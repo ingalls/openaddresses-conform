@@ -105,17 +105,17 @@ function ConformCLI(){
 function loadSource(sourcefile) {    
     var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
     source.id = path.basename(sourcefile, '.json');
-    if(typeof source.headers === 'undefined') {
-        source.headers = 1;
-        source.skip = 1;
+    if(typeof source.conform.headers === 'undefined') {
+        source.conform.headers = 1;
+        source.conform.skiplines = 1;
     }
     else {
-        source.headers = parseInt(source.headers);
-        if (typeof source.skip === 'undefined')
-            source.skip = source.headers;        
+        source.conform.headers = parseInt(source.conform.headers);
+        if (typeof source.conform.skiplines === 'undefined')
+            source.conform.skiplines = source.conform.headers;        
         else {
-            source.skip = parseInt(source.skip);
-            if (source.skip < source.headers) throw 'Cannot skip fewer lines than the header line\'s location';
+            source.conform.skiplines = parseInt(source.conform.skiplines);
+            if (source.conform.skiplines < source.conform.headers) throw 'Cannot skip fewer lines than the header line\'s location';
         }
     }
     

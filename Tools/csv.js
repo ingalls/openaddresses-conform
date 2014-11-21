@@ -202,7 +202,7 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
                 var pieces = [];
                 merge[2].forEach(function(inFieldIndex) {
                     pieces.push(data[inFieldIndex]);
-                });
+                });                
                 data.push(pieces.join(merge[1]));
             });
             
