@@ -1,5 +1,8 @@
-var fs = require('fs');
-var async = require('async');
+var fs = require('fs'),
+    async = require('async'),
+    transform = require('stream-transform'),
+    parse = require('csv-parse'),
+    stringify = require('csv-stringify');
 
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
     var debug = require('debug')('conform:polyshp2csv');
