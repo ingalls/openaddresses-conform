@@ -377,7 +377,7 @@ function conformCache(source, cachedir, callback){
 
 function updateManifest(source, callback) {
     var debug = require('debug')('conform:updateManifest');
-    debug("Updating Manifest of " + source.id);
+    debug("Updating manifest of " + source.id);
     fs.writeFile(source._sourcefile, JSON.stringify(source, null, 4), callback);
 }
 
@@ -385,12 +385,12 @@ function updateCache(source, cachedir, callback) {
 
     var debug = require('debug')('conform:updateCache');
 
-    source.processed = "http://s3.amazonaws.com/" + bucketName + "/" + source.id.replace(".json", ".csv");
+    source.processed = 'http://s3.amazonaws.com/' + bucketName + '/' + source.id + '.csv';
 
-    debug("Updating s3 with " + source.id);
+    debug('Updating s3 with ' + source.id);
 
     var s3 = new AWS.S3();
-    fs.readFile(cachedir + source.id + "/out.csv", function (err, data) {
+    fs.readFile(cachedir + source.id + '/out.csv', function (err, data) {
         if (err)
             throw new Error('Could not find data to upload');
 
