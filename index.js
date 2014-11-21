@@ -45,6 +45,7 @@ function cachedFileLocation(source, cachedir){
 
 function ConformCLI(){
     require('debug').enable('conform:*');
+    var debug = require('debug')('conform:ConformCLI');
 
     //Command Line Args
     var sourcedir = argv._[0],
@@ -85,12 +86,15 @@ function ConformCLI(){
         sources = fs.readdirSync(sourcedir);
 
         // Only retain *.json
-        for (var i = 0; i < sources.length; i++) {
+        for (var i = 0; i < sources.length; i++) {            
             if (sources[i].indexOf('.json') == -1) {
                 sources.splice(i, 1);
                 i--;
             }
         }
+
+        // prepend directory onto filenames
+        sources = sources.map(function(x) { return sourcedir + x;});
     }
 
     main(sources, cachedir);
@@ -402,9 +406,9 @@ function conformCache(source, cachedir, callback){
             csv.dropCol(source, cachedir, cb);
         },
 
-        // reproject CSV
+        // reproject CSV/JSON
         function(cb) {
-            if(source.conform.srs && (source.conform.type === 'csv')) {
+            if(source.conform.srs && ((source.conform.type === 'csv') || (source.conform.type === 'geojson'))) {
                 csv.reproject(source, cachedir, cb);
             }
             else
