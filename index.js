@@ -112,7 +112,7 @@ function loadSource(sourcefile) {
     else {
         source.conform.headers = parseInt(source.conform.headers);
         if (typeof source.conform.skiplines === 'undefined')
-            source.conform.skiplines = source.conform.headers;        
+            source.conform.skiplines = parseInt(source.conform.headers);        
         else {
             source.conform.skiplines = parseInt(source.conform.skiplines);
             if (source.conform.skiplines < source.conform.headers) throw 'Cannot skip fewer lines than the header line\'s location';

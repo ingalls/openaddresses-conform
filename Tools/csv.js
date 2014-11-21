@@ -33,7 +33,7 @@ exports.dropCol = function dropCol(source, cachedir, callback){
     var transformer = transform(function(data) {
         linenum++;
 
-        if(linenum === source.headers) {
+        if(linenum === 1) {
             keep = keep.map(function(x) { return x.toLowerCase(); });
             data = data.map(function(x) { return x.toLowerCase(); });
             for (var i = 0; i < data.length; i++){            
@@ -295,7 +295,7 @@ exports.expand = function expand(source, cachedir, callback) {
         if (linenum % 10000 === 0)
             debug('Processed Addresses: ' + linenum);
 
-        return (linenum > source.conform.skiplines) ? data : _expandElements(data);
+        return (linenum === 1) ? data : _expandElements(data);
     });
 
     outstream.on('close', function() {
