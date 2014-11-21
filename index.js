@@ -39,12 +39,13 @@ function _isFlatFileExtension(ext) {
 
 function cachedFileLocation(source, cachedir){
     if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
-    if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
+    
+    if(source.compression)
+        return cachedir + source.id + '.' + source.compression;
+    else if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1)
         return cachedir + source.id + '/' + source.id + '.' + fileTypeExtensions[source.conform.type];
-    }
-    else {
+    else
         return cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
-    }
 }
 
 function ConformCLI(){
@@ -193,8 +194,7 @@ function downloadCache(source, cachedir, callback) {
         // add trailing slash if it's missing
         if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
 
-        // skip download if the cache has already been downloaded            
-        var sourceFile = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
+        // skip download if the cache has already been downloaded                            
         if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
             debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
             debug('fetching ' + source.cache);
@@ -228,7 +228,10 @@ function downloadCache(source, cachedir, callback) {
 
         } else {
             debug("Cached file exists, skipping download");
-            callback();
+            if (source.compression)
+                unzipCache(source, cachedir, callback);
+            else
+                callback();
         }
     }
 }

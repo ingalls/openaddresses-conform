@@ -72,7 +72,7 @@ The proper syntax would be `"file": "addresspoints/address.shp"` if the file was
 
 `headers` (conform.type==='csv' only) some non-latin CSVs provide header lines in native script and in latin characters. If specified, this field determines which line will be used to determine column names for other conform fields. If not specified, row 1 is assumed.
 
-`skip` (conform.type==='csv' only) may be used in conjunction with `headers` (see above).  For example, if `headers` is 1 but a second header line exists and must be skipped.
+`skiplines` (conform.type==='csv' only) may be used in conjunction with `headers` (see above).  For example, if `headers` is 1 but a second header line exists and must be skipped.
 
 It should be noted that during the conversion, all column names are lowercased and stripped of newline characters and commas are converted to spaces.
 

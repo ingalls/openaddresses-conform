@@ -49,7 +49,7 @@ exports.dropCol = function dropCol(source, cachedir, callback){
 
             return ['LON','LAT','NUMBER','STREET'];
         }
-        else if (linenum > source.skip) {
+        else if (linenum > source.conform.skiplines) {
             return [
                 data[keepCols.lon],
                 data[keepCols.lat],
@@ -108,7 +108,7 @@ exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
             data.push('auto_street');
             return data;
         }
-        else if(linenum > source.skip) {
+        else if(linenum > source.conform.skiplines) {
             var pieces = [];
             mergeIndices.forEach(function(index) {
                 pieces.push(data[index]);
@@ -197,7 +197,7 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
 
             return data;
         }
-        else if(linenum > source.conform.skip) {
+        else if(linenum > source.conform.skiplines) {
             merges.forEach(function(merge) {
                 var pieces = [];
                 merge[2].forEach(function(inFieldIndex) {
@@ -295,7 +295,7 @@ exports.expand = function expand(source, cachedir, callback) {
         if (linenum % 10000 === 0)
             debug('Processed Addresses: ' + linenum);
 
-        return (linenum > source.skip) ? data : _expandElements(data);
+        return (linenum > source.conform.skiplines) ? data : _expandElements(data);
     });
 
     outstream.on('close', function() {
@@ -351,7 +351,7 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
 
             return data;
         }
-        else if (linenum > source.skip) {
+        else if (linenum > source.conform.skiplines) {
             if(data[elementToSplit]) {
                 var token = data[elementToSplit].split(' ');
                 var street = token[numFields];
