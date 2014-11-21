@@ -153,32 +153,59 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
     });
 
     var linenum = 0;
-    var merges = {};
+    var merges = []; // list of tuples: [outField, separator, [fields], order]
 
     var transformer = transform(function(data) {
         linenum++;
 
         if (linenum === source.conform.headers) {
-            lowerData = data.map(function(x) { return x.toLowerCase(); } );            
+
+            lowerData = data.map(function(x) { return x.toLowerCase(); } );    
+
             Object.keys(source.conform.advanced_merge).forEach(function(outField) {
-                merges[outField] = [];
+                var newMerge = [
+                    outField,                    
+                    typeof source.conform.advanced_merge[outField].separator !== 'undefined' ? source.conform.advanced_merge[outField].separator : ' ',
+                    []
+                    //typeof source.conform.advanced_merge[outField].order !== 'undefined' ? parseInt(source.conform.advanced_merge[outField].order) : 0,
+                ];
+
                 source.conform.advanced_merge[outField].fields.forEach(function(inField) {
-                    merges[outField].push(lowerData.indexOf(inField.toLowerCase()));
+                    var foundIndex = lowerData.indexOf(inField.toLowerCase());
+                    if (foundIndex > -1)
+                        newMerge[2].push(foundIndex);
                 });
-                data.push(outField);
+
+                merges.push(newMerge);
             });
+
+            /*
+            // @TODO: enable sorting by optional 'order' field. 
+            // This will allow fields to be built from 
+            // each other -- but will require recursion.
+            merges.sort(function(a, b) { 
+                if (a[1] > b[1]) return 1;
+                if (a[1] < b[1]) return -1;
+                return 0;
+            });
+            */
+
+            // push out headers in the order we arrived at
+            merges.forEach(function(merge) {
+                data.push(merge[0]);
+            });
+
             return data;
         }
         else if(linenum > source.conform.skip) {
-            Object.keys(merges).forEach(function(outField) {
+            merges.forEach(function(merge) {
                 var pieces = [];
-                merges[outField].forEach(function(inField) {
-                    var inFieldIndex = merges[outField][inField];
-                    if (inFieldIndex !== -1)
-                        pieces.push(data[inFieldIndex]);                
+                merge[2].forEach(function(inFieldIndex) {
+                    pieces.push(data[inFieldIndex]);
                 });
-                data.push(pieces.join(source.conform.advanced_merge[outField].separator));
+                data.push(pieces.join(merge[1]));
             });
+            
             return data;
         } 
         else {

@@ -1,5 +1,5 @@
 var fs = require('fs'),
-    iconv = require('iconv-lite'),
+    Iconv = require('iconv').Iconv,
     conform = require('../index.js');
 
 module.exports.utf8 = function(source, cachedir, callback) {
@@ -17,5 +17,7 @@ module.exports.utf8 = function(source, cachedir, callback) {
         });
     });
 
-    instream.pipe(iconv.decodeStream(source.conform.encoding)).pipe(outstream);
+    var iconv = Iconv(source.conform.encoding, 'utf-8');
+
+    instream.pipe(iconv).pipe(outstream);
 }
