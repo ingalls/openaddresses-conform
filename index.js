@@ -14,6 +14,7 @@ var argv = require('minimist')(process.argv.slice(2)),
     fileTypeExtensions = require('./Tools/filetype-extensions.json');
 
 var uploadToAWS = false;
+var bucketName = null;
 
 function _isShapefileExtension(ext) {
     // ensure ext begins with a . ('.txt' not 'txt') 
@@ -48,7 +49,6 @@ function ConformCLI(){
     //Command Line Args
     var sourcedir = argv._[0],
         cachedir = argv._[1],
-        bucketName = undefined,
         uploadToAWS = false;
 
     if (argv._.length == 3)
@@ -99,6 +99,7 @@ function ConformCLI(){
 function loadSource(sourcefile) {    
     var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
     source.id = path.basename(sourcefile, '.json');
+    source._sourcefile = sourcefile;
     return source;
 }
 
@@ -158,7 +159,12 @@ function processSource(source, cachedir, callback) {
     });
     tasks.push(function(cb) {          
         conformCache(source, cachedir, cb);        
-    });
+    });    
+    if (bucketName !== null) {
+        tasks.push(function(cb) {
+            updateCache(source, cachedir, cb);
+        });
+    }
     async.series(tasks, callback);;
 }
 
@@ -369,13 +375,13 @@ function conformCache(source, cachedir, callback){
     );
 }
 
-function updateManifest(source) {
+function updateManifest(source, callback) {
     var debug = require('debug')('conform:updateManifest');
-    fs.writeFileSync(sourcedir + source, JSON.stringify(source, null, 4));
-    debug("Updating Manifest of " + source);
+    debug("Updating Manifest of " + source.id);
+    fs.writeFile(source._sourcefile, JSON.stringify(source, null, 4), callback);
 }
 
-function updateCache(source, cachedir) {
+function updateCache(source, cachedir, callback) {
 
     var debug = require('debug')('conform:updateCache');
 
@@ -394,13 +400,12 @@ function updateCache(source, cachedir) {
 
         s3.putObject({
             Bucket: bucketName,
-            Key: source.id.replace(".json", ".csv"),
+            Key: source.id + '.csv',
             Body: buffer,
             ACL: 'public-read'
         }, function (response) {
-            debug('Successfully uploaded package.');
-            updateManifest(source);
-            downloadCache(++cacheIndex);
+            debug('Successfully uploaded package ' + source.id);
+            updateManifest(source, callback);
         });
     });
 }
