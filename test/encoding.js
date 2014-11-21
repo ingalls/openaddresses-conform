@@ -1,7 +1,7 @@
 var test = require('tape'),
     encoding = require('../Tools/encoding.js'),
     fs = require('fs'),
-    path = require('path');
+    path = require('path'),
     rimraf = require('rimraf'),
     async = require('async'),
     md5 = require('MD5');
