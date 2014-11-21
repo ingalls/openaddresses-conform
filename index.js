@@ -132,14 +132,17 @@ function main(sources, cachedir, callback)
 
     sources.forEach(function(sourceFile, i) {
         source = loadSource(sourceFile);
-        toDoList.push(function(cb) {            
-            processSource(source, cachedir, function(err, results) {
-                // mark sources as failed if an error occurred
-                if(err) failedSources[source.id] = err;
-                // but don't pass through errors -- we want to process all sources                
-                cb(null); 
-            });
-        }); 
+        if(!source.skip)
+            toDoList.push(function(cb) {            
+                processSource(source, cachedir, function(err, results) {
+                    // mark sources as failed if an error occurred
+                    if(err) failedSources[source.id] = err;
+                    // but don't pass through errors -- we want to process all sources                
+                    cb(null); 
+                });
+            }); 
+        else
+            debug('Skipping ' + source.id);
     });
 
     var done = function(err, results) {        
