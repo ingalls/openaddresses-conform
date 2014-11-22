@@ -266,7 +266,7 @@ function unzipCache(source, cachedir, unzipCallback) {
 
     // node-unzip is garbage, we need to shell out :-(
     var sh = require('execSync');
-    sh.run('unzip -o -d ' + unzipDirectory + ' ' + cachedir + source.id + '.' + source.compression);
+    sh.run('unzip -qq -o -d ' + unzipDirectory + ' ' + cachedir + source.id + '.' + source.compression);
 
     process.nextTick(function() {            
         // track the number of output files we encounter. 
@@ -283,12 +283,12 @@ function unzipCache(source, cachedir, unzipCallback) {
                 var extension = pathParts.join('.')
                 if (extension[0] !== '.') extension = '.' + extension;
 
-                var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
-                        
+                var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);                        
+
                 // IF CSV/JSON THEN
                 //    - IF NOT source.conform.file specified, take first JSON/CSV, error on multiple
                 //    - IF source.conform.file specified, only take that path
-                if (_isFlatFileExtension(extension) && (!source.conform.file || (source.conform.file && (source.conform.file===archiveFilename)))) {
+                if (((source.conform.type === 'geojson') || (source.conform.type === 'csv')) && ((_isFlatFileExtension(extension) && !source.conform.file) || (source.conform.file && (source.conform.file===archiveFilename.replace(unzipDirectory + '/', ''))))) {
                     
                     debug('saving file ' + archiveFilename);
 
@@ -303,7 +303,7 @@ function unzipCache(source, cachedir, unzipCallback) {
                 // IF Shapefile THEN
                 //    - IF NOT source.conform.file specified, take first shapefile, error on multiple
                 //    - IF source.conform.file specified, check if entry is party of that shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
-                else if (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
+                else if (((source.conform.type === 'shapefile') || (source.conform.type === 'shapefile-polygon')) && (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath)))) {
 
                     debug('saving file ' + archiveFilename);
 

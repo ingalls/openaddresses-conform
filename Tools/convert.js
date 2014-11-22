@@ -187,12 +187,15 @@ exports.csv = function(source, cachedir, callback) {
 
     var filename = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type]; // eg /tmp/openaddresses/us-va-arlington.csv
     var outFilename = cachedir + source.id + '/out.csv';
-
+    
     var instream = fs.createReadStream(filename);
     var outstream = fs.createWriteStream('./tmp.csv');
 
     var stringifier = stringify();
-    var parser = parse({ relax: true });
+    var parseropts = {relax: true};
+    var numheaders = 0;
+    if (source.conform.csvsplit) parseropts.delimiter = source.conform.csvsplit;
+    var parser = parse(parseropts);
     parser.on('error', function(err) {
         debug(err);    
     });
@@ -204,6 +207,7 @@ exports.csv = function(source, cachedir, callback) {
         linenum++;
 
         if (linenum === source.conform.headers) {            
+            numheaders = data.length;
             return data;
         }
         else if(linenum > source.conform.skiplines) {            
@@ -213,10 +217,34 @@ exports.csv = function(source, cachedir, callback) {
             return null;
     });
     
+
+
     outstream.on('close', function() {
-        fs.rename('./tmp.csv', outFilename, function(err){
-            callback(err);
-        });
+        
+        var finishUp = function(err) {
+            fs.rename('./tmp.csv', outFilename, function(err){
+                callback(err);
+            });
+        };
+
+        // if noheaders was specified, build some damn headers
+        if (source.conform.noheaders) {
+            debug('adding headers to CSV');
+
+            var headers = [];
+            for(var i=1;i<=numheaders;i++)
+                headers.push('COLUMN' + i);
+            fs.writeFileSync('./tmp2.csv', headers.join(',') + '\n');
+            var outstream2 = fs.createWriteStream('./tmp2.csv', { flags: 'a' });
+            outstream2.on('close', function(err) {
+                fs.rename('./tmp2.csv', './tmp.csv', finishUp);
+            });
+            fs.createReadStream('./tmp.csv').pipe(outstream2);
+        }
+        else
+            finishUp(null);
+
+
     });
 
     instream

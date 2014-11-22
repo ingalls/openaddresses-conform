@@ -31,7 +31,11 @@ Conform data can be found in the source files of the openaddresses project. Conf
 
 `"conform"={}` The envelope for all conform data. All of the following properties are children to the `conform` object.
 
-`type` The type properties stores the format. It can currently be either `shapefile`, `shapefile-polygon`, or `geojson`.
+`type` The type properties stores the format. It can currently be either `shapefile`, `shapefile-polygon`, `csv` or `geojson`.
+
+`csvsplit` The character to delimit CSVs by. Defaults to comma.
+
+`noheaders=true` If a CSV file lacks headers, this will add them. They'll be named COLUMN1, COLUMN2, COLUMN3 ... COLUMN10, COLUMN11 etc.
 
 `merge=["one", "two", ..., "nth"]` The merge tag will merge several columns together. This is typically soemthing along the lines of street-name and street-type columns. The merged column will be named `auto_street`
 
