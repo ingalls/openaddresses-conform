@@ -202,15 +202,18 @@ function downloadCache(source, cachedir, callback) {
                         if (bar) bar.tick(chunk.length);
                     });
             }
-            stream.on('end', function() {
-                    if (source.compression)
-                        unzipCache(source, cachedir, callback);
-                    else
-                        callback();
-                });
-
+            
             var downloadDestination = cachedir + source.id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
-            stream.pipe(fs.createWriteStream(downloadDestination));
+
+            var outstream = fs.createWriteStream(downloadDestination);
+            outstream.on('finish', function() {
+                if (source.compression)
+                    unzipCache(source, cachedir, callback);
+                else
+                    callback();
+            });
+
+            stream.pipe(outstream);
 
         } else {
             debug("Cached file exists, skipping download");

@@ -42,6 +42,6 @@
     "xmlbuilder": "2.4.4"
   },
   "scripts": {
-    "test": "node test/*.js"
+    "test": "tape test/*.js"
   }
 }
