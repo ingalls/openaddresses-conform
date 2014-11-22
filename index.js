@@ -248,6 +248,7 @@ function downloadCache(source, cachedir, callback) {
     }
 }
 
+// @TODO make this work with sources like au-queensland && relative working dirs
 function unzipCache(source, cachedir, unzipCallback) {    
     var debug = require('debug')('conform:unzipCache');
 
