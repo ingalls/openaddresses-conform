@@ -111,6 +111,10 @@ function loadSource(sourcefile) {
     }
     else {
         source.conform.headers = parseInt(source.conform.headers);
+        if(source.conform.headers === -1) {
+            source.conform._noheaders = true;
+            source.conform.headers = 1;
+        }
         if (typeof source.conform.skiplines === 'undefined')
             source.conform.skiplines = parseInt(source.conform.headers);        
         else {
@@ -130,7 +134,7 @@ function main(sources, cachedir, callback)
     var failedSources = {};
     var toDoList = [];
     
-    // ensure cachedir ends with a '/'
+    // ensure cachedir is absolute & ends with a '/'
     if(cachedir[cachedir.length - 1] !== path.sep)
         cachedir = cachedir + path.sep;
 
@@ -248,7 +252,6 @@ function downloadCache(source, cachedir, callback) {
     }
 }
 
-// @TODO make this work with sources like au-queensland && relative working dirs
 function unzipCache(source, cachedir, unzipCallback) {    
     var debug = require('debug')('conform:unzipCache');
 

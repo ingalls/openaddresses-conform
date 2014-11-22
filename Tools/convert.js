@@ -228,7 +228,7 @@ exports.csv = function(source, cachedir, callback) {
         };
 
         // if noheaders was specified, build some damn headers
-        if (source.conform.noheaders) {
+        if (source.conform._noheaders) {
             debug('adding headers to CSV');
 
             var headers = [];
