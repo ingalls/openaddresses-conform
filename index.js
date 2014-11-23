@@ -20,7 +20,7 @@ function _isShapefileExtension(ext) {
     if(ext[0]!=='.') ext = '.' + ext;    
     var acceptableExtensions = ['.shp', '.shx', '.dbf', '.prj', '.sbn', '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs', '.mxs', '.atx', '.xml', '.cpg', '.qix', '.shp.xml'];
     return acceptableExtensions.some(function(v) {
-        return ext.match(v + '$');
+        return ext.toLowerCase().match(v + '$');
     });
 }
 
@@ -28,7 +28,7 @@ function _isFlatFileExtension(ext) {
     // ensure ext begins with a . ('.txt' not 'txt') 
     if(ext[0]!=='.') ext = '.' + ext;
     return ['.json', '.csv', '.geojson'].some(function(v) { 
-        return ext.match(v + '$');
+        return ext.toLowerCase().match(v + '$');
     });
 }
 
