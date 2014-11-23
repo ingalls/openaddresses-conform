@@ -4,10 +4,13 @@ var fs = require('fs'),
     parse = require('csv-parse'),
     stringify = require('csv-stringify');
 
-exports.dropCol = function dropCol(keep, loc, callback){
-    var debug = require('debug')('conform:dropCol');
+exports.dropCol = function dropCol(source, cachedir, callback){
+    var debug = require('debug')('conform:csv:dropCol');
 
     debug("Dropping Unnecessary Data");
+
+    var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
+    var loc = cachedir + source.id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -53,7 +56,7 @@ exports.dropCol = function dropCol(keep, loc, callback){
                 data[keepCols.num],
                 data[keepCols.str]
             ];
-        }
+        }        
     });    
 
     outstream.on('close', function() {
@@ -70,9 +73,12 @@ exports.dropCol = function dropCol(keep, loc, callback){
 };
 
 //Joins Columns in order that they are given in array into 'auto_street' column
-exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
-    var debug = require('debug')('conform:mergeStreetName');
+exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
+    var debug = require('debug')('conform:csv:mergeStreetName');
     debug("Merging Columns");
+
+    var cols = source.conform.merge.slice(0);
+    var loc = cachedir + source.id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -123,6 +129,97 @@ exports.mergeStreetName = function mergeStreetName(cols, loc, callback){
         .pipe(outstream); 
 };
 
+// joins arbitrary number of columns into new ones
+exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
+    var debug = require('debug')('conform:csv:advancedMerge');
+    debug("Advanced-merging Columns");
+
+    var loc = cachedir + source.id + "/out.csv";
+
+    if (fs.exists('./tmp.csv'))
+        fs.unlinkSync('./tmp.csv');
+
+    var instream = fs.createReadStream(loc);
+    var outstream = fs.createWriteStream('./tmp.csv');
+
+    var stringifier = stringify();
+    var parser = parse({ relax: true });
+    parser.on('error', function(err) {
+        debug(err);    
+    });
+
+    var linenum = 0;
+    var merges = []; // list of tuples: [outField, separator, [fields], order]
+
+    var transformer = transform(function(data) {
+        linenum++;
+
+        if (linenum === 1) {
+
+            lowerData = data.map(function(x) { return x.toLowerCase(); } );    
+
+            Object.keys(source.conform.advanced_merge).forEach(function(outField) {
+                var newMerge = [
+                    outField,                    
+                    typeof source.conform.advanced_merge[outField].separator !== 'undefined' ? source.conform.advanced_merge[outField].separator : ' ',
+                    []
+                    //typeof source.conform.advanced_merge[outField].order !== 'undefined' ? parseInt(source.conform.advanced_merge[outField].order) : 0,
+                ];
+
+                source.conform.advanced_merge[outField].fields.forEach(function(inField) {
+                    var foundIndex = lowerData.indexOf(inField.toLowerCase());
+                    if (foundIndex > -1)
+                        newMerge[2].push(foundIndex);
+                });
+
+                merges.push(newMerge);
+            });
+
+            /*
+            // @TODO: enable sorting by optional 'order' field. 
+            // This will allow fields to be built from 
+            // each other -- but will require recursion.
+            merges.sort(function(a, b) { 
+                if (a[1] > b[1]) return 1;
+                if (a[1] < b[1]) return -1;
+                return 0;
+            });
+            */
+
+            // push out headers in the order we arrived at
+            merges.forEach(function(merge) {
+                data.push(merge[0]);
+            });
+
+            return data;
+        }
+        else {
+            merges.forEach(function(merge) {
+                var pieces = [];
+                merge[2].forEach(function(inFieldIndex) {
+                    pieces.push(data[inFieldIndex]);
+                });                
+                data.push(pieces.join(merge[1]));
+            });
+            
+            return data;
+        } 
+    });
+    
+    outstream.on('close', function() {
+        fs.rename('./tmp.csv', loc, function(err){
+            callback(err);
+        });
+    });
+
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream); 
+};
+
+
 // this function is @ingalls' code -- I haven't touched it because it's magic --@sbma44
 // do substitutions 
 function _expandElements(elements) {
@@ -168,9 +265,11 @@ function _expandElements(elements) {
     return elements;
 }
 
-exports.expand = function expand(loc, callback) {
-    var debug = require('debug')('conform:expand');
-            
+exports.expand = function expand(source, cachedir, callback) {
+    var debug = require('debug')('conform:csv:expand');
+           
+    var loc = cachedir + source.id + "/out.csv";
+
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
     
@@ -210,12 +309,14 @@ exports.expand = function expand(loc, callback) {
 //numFields defaults to 1
 //and use the remainder as the street address
 //Creates two new columns called auto_num & auto_str
-exports.splitAddress = function splitAddress(col, numFields, loc, callback){
-    var debug = require('debug')('conform:splitAddress');
+exports.splitAddress = function splitAddress(source, cachedir, callback){
+    var debug = require('debug')('conform:csv:splitAddress');
 
     debug('Splitting Address Column');
 
-    col = col.toLowerCase();
+    var col = source.conform.split.toLowerCase();
+    var numFields = 1;
+    var loc = cachedir + source.id + "/out.csv";
 
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
@@ -274,4 +375,45 @@ exports.splitAddress = function splitAddress(col, numFields, loc, callback){
         .pipe(transformer)
         .pipe(stringifier)
         .pipe(outstream);
+};
+
+exports.reproject = function(source, cachedir, callback) {
+    var sh = require('execSync');
+    var debug = require('debug')('conform:csv:reproject');
+
+    debug('reprojecting CSV from ' + source.conform.srs);
+
+    var dir = cachedir + source.id + '/';
+
+    // move input csv
+    if(!fs.existsSync(dir + 'tmp'))
+        fs.mkdirSync(dir + 'tmp');
+    fs.renameSync(dir + 'out.csv', dir + 'tmp/out.csv');
+    
+    // write VRT
+    var vrt = '<OGRVRTDataSource>\
+    <OGRVRTLayer name="out">\
+        <SrcDataSource>' + dir + 'tmp/out.csv</SrcDataSource>\
+        <GeometryType>wkbPoint</GeometryType>\
+        <LayerSRS>' + source.conform.srs + '</LayerSRS>\
+        <GeometryField encoding="PointFromColumns" x="LON" y="LAT"/>\
+    </OGRVRTLayer>\
+</OGRVRTDataSource>'
+    fs.writeFileSync(dir + 'out.vrt', vrt);
+
+    // reproject
+    sh.run('ogr2ogr -f CSV ' + dir + 'out.csv ' + dir + 'out.vrt -lco GEOMETRY=AS_XY -t_srs EPSG:4326 -overwrite');
+
+    // clean up files
+    fs.unlinkSync(dir + 'out.vrt');
+    fs.unlinkSync(dir + 'tmp/out.csv');
+    fs.rmdirSync(dir + 'tmp');
+
+    // drop old columns
+    var tmpSource = JSON.parse(JSON.stringify(source));
+    tmpSource.conform.lon = 'X';
+    tmpSource.conform.lat = 'Y';
+    tmpSource.conform.number = 'NUMBER';
+    tmpSource.conform.street = 'STREET';
+    exports.dropCol(tmpSource, cachedir, callback);    
 };

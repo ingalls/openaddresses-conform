@@ -20,7 +20,7 @@ function _isShapefileExtension(ext) {
     if(ext[0]!=='.') ext = '.' + ext;    
     var acceptableExtensions = ['.shp', '.shx', '.dbf', '.prj', '.sbn', '.sbx', '.fbn', '.fbx', '.ain', '.aih', '.ixs', '.mxs', '.atx', '.xml', '.cpg', '.qix', '.shp.xml'];
     return acceptableExtensions.some(function(v) {
-        return ext.match(v + '$');
+        return ext.toLowerCase().match(v + '$');
     });
 }
 
@@ -28,22 +28,24 @@ function _isFlatFileExtension(ext) {
     // ensure ext begins with a . ('.txt' not 'txt') 
     if(ext[0]!=='.') ext = '.' + ext;
     return ['.json', '.csv', '.geojson'].some(function(v) { 
-        return ext.match(v + '$');
+        return ext.toLowerCase().match(v + '$');
     });
 }
 
 function cachedFileLocation(source, cachedir){
     if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
-    if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
+    
+    if(source.compression)
+        return cachedir + source.id + '.' + source.compression;
+    else if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1)
         return cachedir + source.id + '/' + source.id + '.' + fileTypeExtensions[source.conform.type];
-    }
-    else {
+    else
         return cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
-    }
 }
 
 function ConformCLI(){
     require('debug').enable('conform:*');
+    var debug = require('debug')('conform:ConformCLI');
 
     //Command Line Args
     var sourcedir = argv._[0],
@@ -84,12 +86,15 @@ function ConformCLI(){
         sources = fs.readdirSync(sourcedir);
 
         // Only retain *.json
-        for (var i = 0; i < sources.length; i++) {
+        for (var i = 0; i < sources.length; i++) {            
             if (sources[i].indexOf('.json') == -1) {
                 sources.splice(i, 1);
                 i--;
             }
         }
+
+        // prepend directory onto filenames
+        sources = sources.map(function(x) { return sourcedir + x;});
     }
 
     main(sources, cachedir);
@@ -98,7 +103,27 @@ function ConformCLI(){
 function loadSource(sourcefile) {    
     var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
     source.id = path.basename(sourcefile, '.json');
-    source._sourcefile = sourcefile;
+    source._sourcefile = sourcefile;    
+
+    if(typeof source.conform.headers === 'undefined') {
+        source.conform.headers = 1;
+        source.conform.skiplines = 1;
+    }
+    else {
+        source.conform.headers = parseInt(source.conform.headers);
+        if(source.conform.headers === -1) {
+            source.conform._noheaders = true;
+            source.conform.headers = 1;
+        }
+        if (typeof source.conform.skiplines === 'undefined')
+            source.conform.skiplines = parseInt(source.conform.headers);        
+        else {
+            source.conform.skiplines = parseInt(source.conform.skiplines);
+            if (source.conform.skiplines < source.conform.headers) throw 'Cannot skip fewer lines than the header line\'s location';
+        }
+    }
+
+
     return source;
 }
 
@@ -109,20 +134,23 @@ function main(sources, cachedir, callback)
     var failedSources = {};
     var toDoList = [];
     
-    // ensure cachedir ends with a '/'
+    // ensure cachedir is absolute & ends with a '/'
     if(cachedir[cachedir.length - 1] !== path.sep)
         cachedir = cachedir + path.sep;
 
     sources.forEach(function(sourceFile, i) {
         source = loadSource(sourceFile);
-        toDoList.push(function(cb) {            
-            processSource(source, cachedir, function(err, results) {
-                // mark sources as failed if an error occurred
-                if(err) failedSources[source.id] = err;
-                // but don't pass through errors -- we want to process all sources                
-                cb(null); 
-            });
-        }); 
+        if(!source.skip)
+            toDoList.push(function(cb) {            
+                processSource(source, cachedir, function(err, results) {
+                    // mark sources as failed if an error occurred
+                    if(err) failedSources[source.id] = err;
+                    // but don't pass through errors -- we want to process all sources                
+                    cb(null); 
+                });
+            }); 
+        else
+            debug('Skipping ' + source.id);
     });
 
     var done = function(err, results) {        
@@ -179,8 +207,7 @@ function downloadCache(source, cachedir, callback) {
         // add trailing slash if it's missing
         if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
 
-        // skip download if the cache has already been downloaded            
-        var sourceFile = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
+        // skip download if the cache has already been downloaded                            
         if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
             debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
             debug('fetching ' + source.cache);
@@ -201,8 +228,8 @@ function downloadCache(source, cachedir, callback) {
                     .on('data', function(chunk) {
                         if (bar) bar.tick(chunk.length);
                     });
-            }
-            
+            }            
+
             var downloadDestination = cachedir + source.id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
 
             var outstream = fs.createWriteStream(downloadDestination);
@@ -217,7 +244,10 @@ function downloadCache(source, cachedir, callback) {
 
         } else {
             debug("Cached file exists, skipping download");
-            callback();
+            if (source.compression)
+                unzipCache(source, cachedir, callback);
+            else
+                callback();
         }
     }
 }
@@ -240,7 +270,7 @@ function unzipCache(source, cachedir, unzipCallback) {
 
     // node-unzip is garbage, we need to shell out :-(
     var sh = require('execSync');
-    sh.run('unzip -o -d ' + unzipDirectory + ' ' + cachedir + source.id + '.' + source.compression);
+    sh.run('unzip -qq -o -d ' + unzipDirectory + ' ' + cachedir + source.id + '.' + source.compression);
 
     process.nextTick(function() {            
         // track the number of output files we encounter. 
@@ -257,12 +287,12 @@ function unzipCache(source, cachedir, unzipCallback) {
                 var extension = pathParts.join('.')
                 if (extension[0] !== '.') extension = '.' + extension;
 
-                var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);
-                        
+                var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);                        
+
                 // IF CSV/JSON THEN
                 //    - IF NOT source.conform.file specified, take first JSON/CSV, error on multiple
                 //    - IF source.conform.file specified, only take that path
-                if (_isFlatFileExtension(extension) && (!source.conform.file || (source.conform.file && (source.conform.file===archiveFilename)))) {
+                if (((source.conform.type === 'geojson') || (source.conform.type === 'csv')) && ((_isFlatFileExtension(extension) && !source.conform.file) || (source.conform.file && (source.conform.file===archiveFilename.replace(unzipDirectory + '/', ''))))) {
                     
                     debug('saving file ' + archiveFilename);
 
@@ -277,7 +307,7 @@ function unzipCache(source, cachedir, unzipCallback) {
                 // IF Shapefile THEN
                 //    - IF NOT source.conform.file specified, take first shapefile, error on multiple
                 //    - IF source.conform.file specified, check if entry is party of that shapefile eg source.conform.file=='addresspoints/address.shp' && entry.path=='addresspoints/address.prj'
-                else if (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath))) {
+                else if (((source.conform.type === 'shapefile') || (source.conform.type === 'shapefile-polygon')) && (_isShapefileExtension(extension) && (!source.conform.file || (source.conform.file && entryExistsWithinSourceFilePath)))) {
 
                     debug('saving file ' + archiveFilename);
 
@@ -317,7 +347,20 @@ function conformCache(source, cachedir, callback){
     var csv = require('./Tools/csv');
 
     async.series([
-        function(cb) { //Convert to CSV
+
+        // convert to utf-8
+        function(cb) {
+            var encoding = require('./Tools/encoding');
+            if(source.conform.encoding && (['geojson', 'csv'].indexOf(source.conform.type) > -1)) 
+                encoding.utf8(source, cachedir, function(err) {
+                    cb(err);
+                });
+            else
+                cb();
+        },
+
+        //Convert to CSV
+        function(cb) { 
             var convert = require('./Tools/convert');
 
             var s_srs = source.conform.srs ? source.conform.srs : false;
@@ -329,7 +372,7 @@ function conformCache(source, cachedir, callback){
             else if (source.conform.type === "geojson")
                 convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
             else if (source.conform.type === "csv") {
-                convert.csv(source, cachedir, fileTypeExtensions[source.conform.type], cb);
+                convert.csv(source, cachedir, cb);
             } 
             else
                 cb();                
@@ -340,29 +383,45 @@ function conformCache(source, cachedir, callback){
             if (source.conform.test) // Stops at converting to find col names
                 process.exit(0);
             if (source.conform.merge)
-                csv.mergeStreetName(source.conform.merge.slice(0), cachedir + source.id + "/out.csv", cb);
+                csv.mergeStreetName(source, cachedir, cb);
             else
                 cb();
         }, 
+
+        // Advanced merge columns
+        function(cb) {
+            if(source.conform.advanced_merge)
+                csv.advancedMerge(source, cachedir, cb);
+            else
+                cb();
+        },
 
         // Split Address Columns            
         function(cb) { 
             var csv = require('./Tools/csv');
             if (source.conform.split)
-                csv.splitAddress(source.conform.split, 1, cachedir + source.id + "/out.csv", cb);
+                csv.splitAddress(source, cachedir, cb);
             else
                 cb();
         }, 
 
         // Drop Columns
-        function(cb) { 
-            var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
-            csv.dropCol(keep, cachedir + source.id + "/out.csv", cb);
-        }, 
+        function(cb) {         
+            csv.dropCol(source, cachedir, cb);
+        },
+
+        // reproject CSV/JSON
+        function(cb) {
+            if(source.conform.srs && ((source.conform.type === 'csv') || (source.conform.type === 'geojson'))) {
+                csv.reproject(source, cachedir, cb);
+            }
+            else
+                cb();
+        },
 
         // Expand Abbreviations, Fix Capitalization & drop null rows            
         function(cb) { 
-            csv.expand(cachedir + source.id + "/out.csv", cb);
+            csv.expand(source, cachedir, cb);
         }], 
 
         function(err, results) {
@@ -416,7 +475,8 @@ function updateCache(source, cachedir, callback) {
 module.exports = {
     downloadCache: downloadCache,
     main: main,
-    loadSource: loadSource
+    loadSource: loadSource,
+    fileTypeExtensions: fileTypeExtensions
 }
 
 if (require.main === module) { ConformCLI(); }

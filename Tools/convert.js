@@ -1,5 +1,9 @@
-var fs = require('fs');
-var async = require('async');
+var fs = require('fs'),
+    async = require('async'),
+    transform = require('stream-transform'),
+    parse = require('csv-parse'),
+    stringify = require('csv-stringify'),
+    fileTypeExtensions = require('./filetype-extensions.json');
 
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
     var debug = require('debug')('conform:polyshp2csv');
@@ -174,23 +178,78 @@ exports.json2csv = function json2csv(file, callback) {
     });
 }
 
-exports.csv = function csv(source, cachedir, extension, callback) {
+exports.csv = function(source, cachedir, callback) {    
     var debug = require('debug')('conform:csv');
 
-    var directory = cachedir + source.id; // eg /tmp/openaddresses/us-va-arlington
-    filename = directory + '.' + extension; // eg /tmp/openaddresses/us-va-arlington.csv
+    debug('Cleaning up CSV');
 
-    async.series([        
-        function(cb) {
-            fs.mkdir(directory, cb);
-        },
-        function(cb) {
-            fs.unlink(directory + '/out.csv', cb);
-        }
-    ], function(err, results) {
-        var stream = fs.createReadStream(filename);
-        stream.on('close', callback);
-        stream.pipe(fs.createWriteStream(directory + '/out.csv'));
+    if(!fs.existsSync(cachedir + source.id + '/')) fs.mkdirSync(cachedir + source.id);
+
+    var filename = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type]; // eg /tmp/openaddresses/us-va-arlington.csv
+    var outFilename = cachedir + source.id + '/out.csv';
+    
+    var instream = fs.createReadStream(filename);
+    var outstream = fs.createWriteStream('./tmp.csv');
+
+    var stringifier = stringify();
+    var parseropts = {relax: true};
+    var numheaders = 0;
+    if (source.conform.csvsplit) parseropts.delimiter = source.conform.csvsplit;
+    var parser = parse(parseropts);
+    parser.on('error', function(err) {
+        debug(err);    
     });
-};
 
+    var linenum = 0;
+    var mergeIndices = [];
+
+    var transformer = transform(function(data) {
+        linenum++;
+
+        if (linenum === source.conform.headers) {            
+            numheaders = data.length;
+            return data;
+        }
+        else if(linenum > source.conform.skiplines) {            
+            return data;
+        }
+        else
+            return null;
+    });
+    
+
+
+    outstream.on('close', function() {
+        
+        var finishUp = function(err) {
+            fs.rename('./tmp.csv', outFilename, function(err){
+                callback(err);
+            });
+        };
+
+        // if noheaders was specified, build some damn headers
+        if (source.conform._noheaders) {
+            debug('adding headers to CSV');
+
+            var headers = [];
+            for(var i=1;i<=numheaders;i++)
+                headers.push('COLUMN' + i);
+            fs.writeFileSync('./tmp2.csv', headers.join(',') + '\n');
+            var outstream2 = fs.createWriteStream('./tmp2.csv', { flags: 'a' });
+            outstream2.on('close', function(err) {
+                fs.rename('./tmp2.csv', './tmp.csv', finishUp);
+            });
+            fs.createReadStream('./tmp.csv').pipe(outstream2);
+        }
+        else
+            finishUp(null);
+
+
+    });
+
+    instream
+        .pipe(parser)
+        .pipe(transformer)
+        .pipe(stringifier)
+        .pipe(outstream); 
+}
