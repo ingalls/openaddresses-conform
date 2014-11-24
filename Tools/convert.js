@@ -3,6 +3,7 @@ var fs = require('fs'),
     transform = require('stream-transform'),
     parse = require('csv-parse'),
     stringify = require('csv-stringify'),
+    expat = require('node-expat'),
     fileTypeExtensions = require('./filetype-extensions.json');
 
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
@@ -253,3 +254,84 @@ exports.csv = function(source, cachedir, callback) {
         .pipe(stringifier)
         .pipe(outstream); 
 }
+
+exports.xml = function(source, cachedir, callback) {
+
+    var debug = require('debug')('conform:csv:xml');
+
+    debug('Converting XML file to CSV');
+
+    var row = {};
+    var match = {};
+    source.conform.xml.forEach(function(val) {
+        match[val] = val.split('/').reverse();
+    });
+    var capture = null;
+    var parser = new expat.Parser('UTF-8');
+
+    var tree = [];
+    parser.on('startElement', function(name, attrs) {
+        tree.unshift(name);
+
+        Object.keys(match).forEach(function(col) {
+            if (match[col].every(function(val, index) { return (tree[index] === val); })) {
+                capture = col;
+            } 
+        });   
+    });
+
+    parser.on('text', function(value) {
+        if (capture !== null) {
+            // emit row if we've got a value filled in for this one
+            if (row[capture]) {
+                var out = [];
+                source.conform.xml.forEach(function(col) {
+                    out.push(row[col]);
+                });
+                stringifier.write(out);            
+                row = {};
+            }
+            row[capture] = value;
+            capture = null;
+        }
+    });
+
+    parser.on('error', function(err) {
+        debug(err);
+    });
+
+    parser.on('endElement', function(name) {
+        tree.shift();
+    });
+
+    parser.on('end', function() {
+        stringifier.end();
+    });
+
+    if(!fs.existsSync(cachedir + source.id))
+        fs.mkdirSync(cachedir + source.id);
+    var outstream = fs.createWriteStream(cachedir + source.id + '/out.csv');
+    outstream.on('close', function(err) {
+        callback(err);
+    });
+
+    var stringifier = stringify({delimiter: ','});
+    stringifier.on('error', function(err){
+        debug(err);
+    });
+    stringifier.pipe(outstream);
+    
+    // write headers
+    stringifier.write(source.conform.xml);
+
+    fs
+        .createReadStream(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type])
+        .pipe(parser);
+}
+
+
+
+// number: pad_numer_porzadkowy ?
+// street: ulc_nazwa
+// SRS: 
+
