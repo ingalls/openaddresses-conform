@@ -256,82 +256,18 @@ exports.csv = function(source, cachedir, callback) {
 }
 
 exports.xml = function(source, cachedir, callback) {
+    var sh = require('execSync');
+    var debug = require('debug')('conform:convert:xml');
 
-    var debug = require('debug')('conform:csv:xml');
+    debug('extracting CSV data from XML');
 
-    debug('Converting XML file to CSV');
+    if (source.conform.srs) 
+        sh.run('ogr2ogr -s_srs ' + source.conform.srs + ' -t_srs EPSG:4326 -f CSV ' + cachedir + source.id + '/out.csv ' + cachedir + source.id + '.' + fileTypeExtensions[source.conform.type] + ' -lco GEOMETRY=AS_XYZ');
+    else      
+        sh.run('ogr2ogr -t_srs EPSG:4326 -f CSV ' + cachedir + source.id + '/out.csv ' + cachedir + source.id + '.' + fileTypeExtensions[source.conform.type] + ' -lco GEOMETRY=AS_XYZ');
 
-    var row = {};
-    var match = {};
-    source.conform.xml.forEach(function(val) {
-        match[val] = val.split('/').reverse();
-    });
-    var capture = null;
-    var parser = new expat.Parser('UTF-8');
-
-    var tree = [];
-    parser.on('startElement', function(name, attrs) {
-        tree.unshift(name);
-
-        Object.keys(match).forEach(function(col) {
-            if (match[col].every(function(val, index) { return (tree[index] === val); })) {
-                capture = col;
-            } 
-        });   
-    });
-
-    parser.on('text', function(value) {
-        if (capture !== null) {
-            // emit row if we've got a value filled in for this one
-            if (row[capture]) {
-                var out = [];
-                source.conform.xml.forEach(function(col) {
-                    out.push(row[col]);
-                });
-                stringifier.write(out);            
-                row = {};
-            }
-            row[capture] = value;
-            capture = null;
-        }
-    });
-
-    parser.on('error', function(err) {
-        debug(err);
-    });
-
-    parser.on('endElement', function(name) {
-        tree.shift();
-    });
-
-    parser.on('end', function() {
-        stringifier.end();
-    });
-
-    if(!fs.existsSync(cachedir + source.id))
-        fs.mkdirSync(cachedir + source.id);
-    var outstream = fs.createWriteStream(cachedir + source.id + '/out.csv');
-    outstream.on('close', function(err) {
-        callback(err);
-    });
-
-    var stringifier = stringify({delimiter: ','});
-    stringifier.on('error', function(err){
-        debug(err);
-    });
-    stringifier.pipe(outstream);
-    
-    // write headers
-    stringifier.write(source.conform.xml);
-
-    fs
-        .createReadStream(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type])
-        .pipe(parser);
+    callback();
 }
 
 
-
-// number: pad_numer_porzadkowy ?
-// street: ulc_nazwa
-// SRS: 
 
