@@ -198,7 +198,7 @@ function processSource(source, cachedir, callback) {
 function downloadCache(source, cachedir, callback) {    
     var debug = require('debug')('conform:downloadCache');    
 
-    if ((!source.cache) || (source.skip === true) || (!source.conform)) {
+    if ((!source.data) || (source.skip === true) || (!source.conform)) {
         debug("Skipping: " + source.id);
         callback(null);
     } else {
@@ -210,8 +210,8 @@ function downloadCache(source, cachedir, callback) {
         // skip download if the cache has already been downloaded                            
         if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
             debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
-            debug('fetching ' + source.cache);
-            var stream = request(source.cache);
+            debug('fetching ' + source.data);
+            var stream = request(source.data);
 
             var bar;
             if(debug.enabled) {
