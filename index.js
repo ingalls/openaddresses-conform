@@ -277,6 +277,7 @@ function unzipCache(source, cachedir, unzipCallback) {
         // if >1, our path scheme is not gonna work
         matchingFiles = [];
         recursive(unzipDirectory, function (err, files) {                              
+            
             var qtasks = [];
             files.forEach(function(archiveFilename) {
                 
@@ -316,9 +317,24 @@ function unzipCache(source, cachedir, unzipCallback) {
                         matchingFiles.push(archiveFilename);
                         if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible shapefiles: ' + matchingFiles.join(', ');
                     }
+
+                    // avoid subdirectory filetype conflict monkey business, e.g.
+                    // - data.shp
+                    // - data.dbf
+                    // - extras/data.dbf 
+                    // (stupid be-flanders)
+                    var skipFile = false;
+                    if(source.conform.file){
+                        var archivePathParts = archiveFilename.split(path.sep);
+                        var conformFilePathParts = source.conform.file.split(path.sep);
+                        if (archivePathParts[archivePathParts.length - 2] !== conformFilePathParts[conformFilePathParts.length - 2])
+                            skipFile = true;
+                    }
                 
-                    var outpath = cachedir + source.id + '/' + source.id + extension;                        
-                    qtasks.push({in: archiveFilename, out: outpath});             
+                    if (!skipFile) {
+                        var outpath = cachedir + source.id + '/' + source.id + extension;                        
+                        qtasks.push({in: archiveFilename, out: outpath});             
+                    }
                 }
                 else {                        
                     qtasks.push({in: archiveFilename, rm: true});
