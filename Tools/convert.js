@@ -183,10 +183,10 @@ exports.csv = function(source, cachedir, callback) {
 
     debug('Cleaning up CSV');
 
-    if(!fs.existsSync(cachedir + source.id + '/')) fs.mkdirSync(cachedir + source.id);
+    if(!fs.existsSync(cachedir + source._id + '/')) fs.mkdirSync(cachedir + source._id);
 
-    var filename = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type]; // eg /tmp/openaddresses/us-va-arlington.csv
-    var outFilename = cachedir + source.id + '/out.csv';
+    var filename = cachedir + source._id + '.' + fileTypeExtensions[source.conform.type]; // eg /tmp/openaddresses/us-va-arlington.csv
+    var outFilename = cachedir + source._id + '/out.csv';
     
     var instream = fs.createReadStream(filename);
     var outstream = fs.createWriteStream('./tmp.csv');

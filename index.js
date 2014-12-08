@@ -36,11 +36,11 @@ function cachedFileLocation(source, cachedir){
     if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
     
     if(source.compression)
-        return cachedir + source.id + '.' + source.compression;
+        return cachedir + source._id + '.' + source.compression;
     else if(['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1)
-        return cachedir + source.id + '/' + source.id + '.' + fileTypeExtensions[source.conform.type];
+        return cachedir + source._id + '/' + source._id + '.' + fileTypeExtensions[source.conform.type];
     else
-        return cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];
+        return cachedir + source._id + '.' + fileTypeExtensions[source.conform.type];
 }
 
 function ConformCLI(){
@@ -102,7 +102,7 @@ function ConformCLI(){
 
 function loadSource(sourcefile) {    
     var source = JSON.parse(fs.readFileSync(sourcefile, 'utf8'));
-    source.id = path.basename(sourcefile, '.json');
+    source._id = path.basename(sourcefile, '.json');
     source._sourcefile = sourcefile;    
 
     if(typeof source.conform.headers === 'undefined') {
@@ -144,13 +144,13 @@ function main(sources, cachedir, callback)
             toDoList.push(function(cb) {            
                 processSource(source, cachedir, function(err, results) {
                     // mark sources as failed if an error occurred
-                    if(err) failedSources[source.id] = err;
+                    if(err) failedSources[source._id] = err;
                     // but don't pass through errors -- we want to process all sources                
                     cb(null); 
                 });
             }); 
         else
-            debug('Skipping ' + source.id);
+            debug('Skipping ' + source._id);
     });
 
     var done = function(err, results) {        
@@ -199,10 +199,10 @@ function downloadCache(source, cachedir, callback) {
     var debug = require('debug')('conform:downloadCache');    
 
     if ((!source.cache) || (source.skip === true) || (!source.conform)) {
-        debug("Skipping: " + source.id);
+        debug("Skipping: " + source._id);
         callback(null);
     } else {
-        debug("Processing: " + source.id);
+        debug("Processing: " + source._id);
 
         // add trailing slash if it's missing
         if (cachedir[cachedir.length-1] !== '/') cachedir += '/';
@@ -230,7 +230,7 @@ function downloadCache(source, cachedir, callback) {
                     });
             }            
 
-            var downloadDestination = cachedir + source.id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
+            var downloadDestination = cachedir + source._id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
 
             var outstream = fs.createWriteStream(downloadDestination);
             outstream.on('finish', function() {
@@ -257,20 +257,20 @@ function unzipCache(source, cachedir, unzipCallback) {
 
     // if it's a shapefile, make a directory for it to live in
     if (['shapefile', 'shapefile-polygon'].indexOf(source.conform.type) > -1) {
-        if (!fs.existsSync(cachedir + source.id)) {
+        if (!fs.existsSync(cachedir + source._id)) {
             debug('creating directory for shapefile')
-            fs.mkdirSync(cachedir + source.id);
+            fs.mkdirSync(cachedir + source._id);
         }
     } 
 
-    var unzipDirectory = cachedir + source.id + '.unzip';
+    var unzipDirectory = cachedir + source._id + '.unzip';
     debug("Starting decompression to " + unzipDirectory);    
 
     if(!fs.existsSync(unzipDirectory)) fs.mkdirSync(unzipDirectory);
 
     // node-unzip is garbage, we need to shell out :-(
     var sh = require('execSync');
-    sh.run('unzip -qq -o -d ' + unzipDirectory + ' ' + cachedir + source.id + '.' + source.compression);
+    sh.run('unzip -qq -o -d ' + unzipDirectory + ' ' + cachedir + source._id + '.' + source.compression);
 
     process.nextTick(function() {            
         // track the number of output files we encounter. 
@@ -301,7 +301,7 @@ function unzipCache(source, cachedir, unzipCallback) {
                         if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible files: ' + matchingFiles.join(', ');
                     }
 
-                    var outpath = cachedir + source.id + '.' + fileTypeExtensions[source.conform.type];                        
+                    var outpath = cachedir + source._id + '.' + fileTypeExtensions[source.conform.type];                        
                     qtasks.push({in: archiveFilename, out: outpath});
                 }
                 // IF Shapefile THEN
@@ -317,7 +317,7 @@ function unzipCache(source, cachedir, unzipCallback) {
                         if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible shapefiles: ' + matchingFiles.join(', ');
                     }
                 
-                    var outpath = cachedir + source.id + '/' + source.id + extension;                        
+                    var outpath = cachedir + source._id + '/' + source._id + extension;                        
                     qtasks.push({in: archiveFilename, out: outpath});             
                 }
                 else {                        
@@ -366,11 +366,11 @@ function conformCache(source, cachedir, callback){
             var s_srs = source.conform.srs ? source.conform.srs : false;
 
             if (source.conform.type === "shapefile")
-                convert.shp2csv(cachedir + source.id + "/", source.id + '.shp', s_srs, cb);
+                convert.shp2csv(cachedir + source._id + "/", source._id + '.shp', s_srs, cb);
             else if (source.conform.type === "shapefile-polygon")
-                convert.polyshp2csv(cachedir + source.id + "/", source.id + '.shp', s_srs, cb);
+                convert.polyshp2csv(cachedir + source._id + "/", source._id + '.shp', s_srs, cb);
             else if (source.conform.type === "geojson")
-                convert.json2csv(cachedir + source.id + '.' + fileTypeExtensions[source.conform.type], cb);
+                convert.json2csv(cachedir + source._id + '.' + fileTypeExtensions[source.conform.type], cb);
             else if (source.conform.type === "csv") {
                 convert.csv(source, cachedir, cb);
             } 
@@ -439,20 +439,24 @@ function conformCache(source, cachedir, callback){
 
 function updateManifest(source, callback) {
     var debug = require('debug')('conform:updateManifest');
-    debug("Updating manifest of " + source.id);
-    fs.writeFile(source._sourcefile, JSON.stringify(source, null, 4), callback);
+    debug("Updating manifest of " + source._id);
+    var trimmedSource = {};
+    Object.keys(source).forEach(function(k) {
+        if(k[0] !== '_') trimmedSource[k] = source[k];
+    });
+    fs.writeFile(source._sourcefile, JSON.stringify(trimmedSource, null, 4), callback);
 }
 
 function updateCache(source, cachedir, callback) {
 
     var debug = require('debug')('conform:updateCache');
 
-    source.processed = 'http://s3.amazonaws.com/' + bucketName + '/' + source.id + '.csv';
+    source.processed = 'http://s3.amazonaws.com/' + bucketName + '/' + source._id + '.csv';
 
-    debug('Updating s3 with ' + source.id);
+    debug('Updating s3 with ' + source._id);
 
     var s3 = new AWS.S3();
-    fs.readFile(cachedir + source.id + '/out.csv', function (err, data) {
+    fs.readFile(cachedir + source._id + '/out.csv', function (err, data) {
         if (err)
             throw new Error('Could not find data to upload');
 
@@ -462,11 +466,11 @@ function updateCache(source, cachedir, callback) {
 
         s3.putObject({
             Bucket: bucketName,
-            Key: source.id + '.csv',
+            Key: source._id + '.csv',
             Body: buffer,
             ACL: 'public-read'
         }, function (response) {
-            debug('Successfully uploaded package ' + source.id);
+            debug('Successfully uploaded package ' + source._id);
             updateManifest(source, callback);
         });
     });

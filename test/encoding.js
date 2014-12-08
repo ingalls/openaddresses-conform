@@ -24,7 +24,7 @@ test('Encoding test', function(t) {
     write.on('finish', function(){
 
         var source = {
-            id: 'euckr-sample',
+            _id: 'euckr-sample',
             conform: {
                 type: 'csv',
                 encoding: 'EUCKR'

@@ -6,7 +6,7 @@ module.exports.utf8 = function(source, cachedir, callback) {
     var debug = require('debug')('conform:utf8');
     debug('Changing encoding from ' + source.conform.encoding);
 
-    var loc = cachedir + source.id + '.' + conform.fileTypeExtensions[source.conform.type];
+    var loc = cachedir + source._id + '.' + conform.fileTypeExtensions[source.conform.type];
 
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.iconv');
