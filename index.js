@@ -467,8 +467,6 @@ function updateCache(source, cachedir, callback) {
 
     var debug = require('debug')('conform:updateCache');
 
-    source.processed = 'http://s3.amazonaws.com/' + bucketName + '/' + source._id + '.csv';
-
     debug('Updating s3 with ' + source._id);
 
     var s3 = new AWS.S3();
