@@ -198,7 +198,7 @@ function processSource(source, cachedir, callback) {
 function downloadCache(source, cachedir, callback) {    
     var debug = require('debug')('conform:downloadCache');    
 
-    if ((!source.cache) || (source.skip === true) || (!source.conform)) {
+    if ((!source.data) || (source.skip === true) || (!source.conform)) {
         debug("Skipping: " + source._id);
         callback(null);
     } else {
@@ -210,8 +210,8 @@ function downloadCache(source, cachedir, callback) {
         // skip download if the cache has already been downloaded                            
         if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
             debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
-            debug('fetching ' + source.cache);
-            var stream = request(source.cache);
+            debug('fetching ' + source.data);
+            var stream = request(source.data);
 
             var bar;
             if(debug.enabled) {
@@ -277,6 +277,7 @@ function unzipCache(source, cachedir, unzipCallback) {
         // if >1, our path scheme is not gonna work
         matchingFiles = [];
         recursive(unzipDirectory, function (err, files) {                              
+            
             var qtasks = [];
             files.forEach(function(archiveFilename) {
                 
@@ -316,9 +317,24 @@ function unzipCache(source, cachedir, unzipCallback) {
                         matchingFiles.push(archiveFilename);
                         if(matchingFiles.length > 1) throw 'Cannot parse archive - contains multiple eligible shapefiles: ' + matchingFiles.join(', ');
                     }
+
+                    // avoid subdirectory filetype conflict monkey business, e.g.
+                    // - data.shp
+                    // - data.dbf
+                    // - extras/data.dbf 
+                    // (stupid be-flanders)
+                    var skipFile = false;
+                    if(source.conform.file){
+                        var archivePathParts = archiveFilename.split(path.sep);
+                        var conformFilePathParts = source.conform.file.split(path.sep);
+                        if (archivePathParts[archivePathParts.length - 2] !== conformFilePathParts[conformFilePathParts.length - 2])
+                            skipFile = true;
+                    }
                 
-                    var outpath = cachedir + source._id + '/' + source._id + extension;                        
-                    qtasks.push({in: archiveFilename, out: outpath});             
+                    if (!skipFile) {
+                        var outpath = cachedir + source._id + '/' + source._id + extension;                        
+                        qtasks.push({in: archiveFilename, out: outpath});             
+                    }
                 }
                 else {                        
                     qtasks.push({in: archiveFilename, rm: true});
