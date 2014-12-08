@@ -10,7 +10,7 @@ exports.dropCol = function dropCol(source, cachedir, callback){
     debug("Dropping Unnecessary Data");
 
     var keep = [source.conform.lon, source.conform.lat, source.conform.number, source.conform.street];
-    var loc = cachedir + source.id + "/out.csv";
+    var loc = cachedir + source._id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -78,7 +78,7 @@ exports.mergeStreetName = function mergeStreetName(source, cachedir, callback){
     debug("Merging Columns");
 
     var cols = source.conform.merge.slice(0);
-    var loc = cachedir + source.id + "/out.csv";
+    var loc = cachedir + source._id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -134,7 +134,7 @@ exports.advancedMerge = function mergeStreetName(source, cachedir, callback){
     var debug = require('debug')('conform:csv:advancedMerge');
     debug("Advanced-merging Columns");
 
-    var loc = cachedir + source.id + "/out.csv";
+    var loc = cachedir + source._id + "/out.csv";
 
     if (fs.exists('./tmp.csv'))
         fs.unlinkSync('./tmp.csv');
@@ -268,7 +268,7 @@ function _expandElements(elements) {
 exports.expand = function expand(source, cachedir, callback) {
     var debug = require('debug')('conform:csv:expand');
            
-    var loc = cachedir + source.id + "/out.csv";
+    var loc = cachedir + source._id + "/out.csv";
 
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
@@ -316,7 +316,7 @@ exports.splitAddress = function splitAddress(source, cachedir, callback){
 
     var col = source.conform.split.toLowerCase();
     var numFields = 1;
-    var loc = cachedir + source.id + "/out.csv";
+    var loc = cachedir + source._id + "/out.csv";
 
     var instream = fs.createReadStream(loc);
     var outstream = fs.createWriteStream('./tmp.csv');
@@ -383,7 +383,7 @@ exports.reproject = function(source, cachedir, callback) {
 
     debug('reprojecting CSV from ' + source.conform.srs);
 
-    var dir = cachedir + source.id + '/';
+    var dir = cachedir + source._id + '/';
 
     // move input csv
     if(!fs.existsSync(dir + 'tmp'))
