@@ -213,17 +213,19 @@ function downloadCache(source, cachedir, callback) {
             debug('fetching ' + source.cache);
             var stream = request(source.cache);
 
-            var bar;
+            var bar = false;
             if(debug.enabled) {
                 stream
                     .on('response', function(res) {
-                        var len = parseInt(res.headers['content-length'], 10);
-                        bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
-                            complete: '=',
-                            incomplete: '-',
-                            width: 20,
-                            total: len
-                        });
+                        if (res.headers['content-length']) {
+                            var len = parseInt(res.headers['content-length'], 10);
+                            bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
+                                complete: '=',
+                                incomplete: '-',
+                                width: 20,
+                                total: len
+                            });
+                        }
                     })
                     .on('data', function(chunk) {
                         if (bar) bar.tick(chunk.length);
