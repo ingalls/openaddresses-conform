@@ -414,7 +414,7 @@ function conformCache(source, cachedir, callback){
 
         // reproject CSV/JSON
         function(cb) {
-            if(source.conform.srs && ((source.conform.type === 'xml') || (source.conform.type === 'csv') || (source.conform.type === 'geojson'))) {
+            if(source.conform.srs && ((source.conform.type === 'csv') || (source.conform.type === 'geojson'))) {
                 csv.reproject(source, cachedir, cb);
             }
             else
