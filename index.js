@@ -123,7 +123,6 @@ function loadSource(sourcefile) {
         }
     }
 
-
     return source;
 }
 
@@ -373,7 +372,7 @@ function conformCache(source, cachedir, callback){
                 convert.polyshp2csv(cachedir + source._id + "/", source._id + '.shp', s_srs, cb);
             else if (source.conform.type === "geojson")
                 convert.json2csv(cachedir + source._id + '.' + fileTypeExtensions[source.conform.type], cb);
-            else if (source.conform.type === "csv") {
+            else if (source.conform.type === "csv")
                 convert.csv(source, cachedir, cb);
             else if (source.conform.type === "xml")
                 convert.xml(source, cachedir, cb);
@@ -415,7 +414,7 @@ function conformCache(source, cachedir, callback){
 
         // reproject CSV/JSON
         function(cb) {
-            if(source.conform.srs && ((source.conform.type === 'csv') || (source.conform.type === 'geojson'))) {
+            if(source.conform.srs && ((source.conform.type === 'xml') || (source.conform.type === 'csv') || (source.conform.type === 'geojson'))) {
                 csv.reproject(source, cachedir, cb);
             }
             else
