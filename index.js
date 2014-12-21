@@ -5,7 +5,6 @@ var argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
     path = require('path'),
     ProgressBar = require('progress'),
-    request = require('request'),
     AWS = require('aws-sdk'),    
     async = require('async'),
     recursive = require('recursive-readdir'),
@@ -210,46 +209,16 @@ function downloadCache(source, cachedir, callback) {
         if (!fs.existsSync(cachedFileLocation(source, cachedir))) {
             debug('did not find cached file at ' + cachedFileLocation(source, cachedir));
             debug('fetching ' + source.data);
-            var stream = request(source.data);
-
-            var bar = false;
-            if(debug.enabled) {
-                stream
-                    .on('response', function(res) {
-                        if (res.headers['content-length']) {
-                            var len = parseInt(res.headers['content-length'], 10);
-                            bar = new ProgressBar('  Downloading [:bar] :percent :etas', {
-                                complete: '=',
-                                incomplete: '-',
-                                width: 20,
-                                total: len
-                            });
-                        }
-                    })
-                    .on('data', function(chunk) {
-                        if (bar) bar.tick(chunk.length);
-                    });
-            }            
-
+            
             var downloadDestination = cachedir + source._id + '.' + (source.compression ? source.compression : fileTypeExtensions[source.conform.type]);
-
-            var outstream = fs.createWriteStream(downloadDestination);
-            outstream.on('finish', function() {
-                if (source.compression)
-                    unzipCache(source, cachedir, callback);
-                else
-                    callback();
-            });
-
-            stream.pipe(outstream);
-
-        } else {
-            debug("Cached file exists, skipping download");
-            if (source.compression)
-                unzipCache(source, cachedir, callback);
-            else
-                callback();
+            sh = require('execSync');            
+            sh.run('curl -s ' + source.data + ' -o ' + downloadDestination)
         }
+
+        if (source.compression)
+            unzipCache(source, cachedir, callback);
+        else
+            callback();        
     }
 }
 
