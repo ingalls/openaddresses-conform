@@ -9,7 +9,7 @@
         "state": "wa",
         "county": "Snohomish"
     },
-    "data": "ftp://ftp.snoco.org/E-911/Shapefiles/Address%20Points.zip",
+    "data": "http://data.openaddresses.io/test/us-wa-snohmish.zip",    
     "license": "Unknown",
     "year": "2013",
     "type": "ftp",
