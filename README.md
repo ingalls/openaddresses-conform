@@ -29,3 +29,4 @@ Where
 Conform data can be found in the source files of the openaddresses project. Conform data is used to convert the data to a single standardized format.
 
 In order to prevent fragmention accross processing libraries, all documentation about `conform` objects can be found in the main [CONTRIBUTING.md](https://github.com/openaddresses/openaddresses/blob/master/CONTRIBUTING.md) doc
+
