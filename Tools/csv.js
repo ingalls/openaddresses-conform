@@ -409,7 +409,7 @@ exports.reproject = function(source, cachedir, callback) {
     fs.unlinkSync(dir + 'tmp/out.csv');
     fs.rmdirSync(dir + 'tmp');
 
-    // drop old columns
+    // drop old geometry columns
     var tmpSource = JSON.parse(JSON.stringify(source));
     tmpSource.conform.lon = 'X';
     tmpSource.conform.lat = 'Y';

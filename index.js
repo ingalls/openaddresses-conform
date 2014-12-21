@@ -27,7 +27,7 @@ function _isShapefileExtension(ext) {
 function _isFlatFileExtension(ext) {
     // ensure ext begins with a . ('.txt' not 'txt') 
     if(ext[0]!=='.') ext = '.' + ext;
-    return ['.json', '.csv', '.geojson'].some(function(v) { 
+    return ['.json', '.csv', '.geojson', '.xml', '.gml'].some(function(v) { 
         return ext.toLowerCase().match(v + '$');
     });
 }
@@ -122,7 +122,6 @@ function loadSource(sourcefile) {
             if (source.conform.skiplines < source.conform.headers) throw 'Cannot skip fewer lines than the header line\'s location';
         }
     }
-
 
     return source;
 }
@@ -292,10 +291,10 @@ function unzipCache(source, cachedir, unzipCallback) {
 
                 var entryExistsWithinSourceFilePath = source.conform.file && (archiveFilename.indexOf(path.basename(source.conform.file, path.extname(source.conform.file))) > -1);                        
 
-                // IF CSV/JSON THEN
+                // IF CSV/JSON/XML THEN
                 //    - IF NOT source.conform.file specified, take first JSON/CSV, error on multiple
                 //    - IF source.conform.file specified, only take that path
-                if (((source.conform.type === 'geojson') || (source.conform.type === 'csv')) && ((_isFlatFileExtension(extension) && !source.conform.file) || (source.conform.file && (source.conform.file===archiveFilename.replace(unzipDirectory + '/', ''))))) {
+                if ((['geojson', 'csv', 'xml'].indexOf(source.conform.type) > -1) && ((_isFlatFileExtension(extension) && !source.conform.file) || (source.conform.file && (source.conform.file===archiveFilename.replace(unzipDirectory + '/', ''))))) {
                     
                     debug('saving file ' + archiveFilename);
 
@@ -389,9 +388,10 @@ function conformCache(source, cachedir, callback){
                 convert.polyshp2csv(cachedir + source._id + "/", source._id + '.shp', s_srs, cb);
             else if (source.conform.type === "geojson")
                 convert.json2csv(cachedir + source._id + '.' + fileTypeExtensions[source.conform.type], cb);
-            else if (source.conform.type === "csv") {
+            else if (source.conform.type === "csv")
                 convert.csv(source, cachedir, cb);
-            } 
+            else if (source.conform.type === "xml")
+                convert.xml(source, cachedir, cb);
             else
                 cb();                
         }, 

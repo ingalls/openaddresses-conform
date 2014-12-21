@@ -3,6 +3,7 @@ var fs = require('fs'),
     transform = require('stream-transform'),
     parse = require('csv-parse'),
     stringify = require('csv-stringify'),
+    expat = require('node-expat'),
     fileTypeExtensions = require('./filetype-extensions.json');
 
 exports.polyshp2csv = function polyshp2csv(dir, shp, s_srs, callback) {
@@ -253,3 +254,22 @@ exports.csv = function(source, cachedir, callback) {
         .pipe(stringifier)
         .pipe(outstream); 
 }
+
+exports.xml = function(source, cachedir, callback) {
+    var sh = require('execSync');
+    var debug = require('debug')('conform:convert:xml');
+
+    debug('extracting CSV data from XML');
+
+    if(!fs.existsSync(cachedir + source._id + '/')) fs.mkdirSync(cachedir + source._id);
+
+    if (source.conform.srs) 
+        sh.run('ogr2ogr -s_srs ' + source.conform.srs + ' -t_srs EPSG:4326 -f CSV ' + cachedir + source._id + '/out.csv ' + cachedir + source._id + '.' + fileTypeExtensions[source.conform.type] + ' -lco GEOMETRY=AS_XYZ');
+    else      
+        sh.run('ogr2ogr -t_srs EPSG:4326 -f CSV ' + cachedir + source.id + '/out.csv ' + cachedir + source._id + '.' + fileTypeExtensions[source.conform.type] + ' -lco GEOMETRY=AS_XYZ');
+
+    callback();
+}
+
+
+
