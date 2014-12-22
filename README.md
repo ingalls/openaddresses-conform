@@ -1,6 +1,8 @@
 openaddresses-conform
 =====================
 
+![TravisCI status](https://travis-ci.org/openaddresses/openaddresses-conform.svg)
+
 A utility to download the openaddresses cache and wrangle them into a standardized format. Work in progress.
 
 ## Installation
