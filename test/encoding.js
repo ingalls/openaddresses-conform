@@ -24,14 +24,14 @@ test('Encoding test', function(t) {
     write.on('finish', function(){
 
         var source = {
-            id: 'euckr-sample',
+            _id: 'euckr-sample',
             conform: {
                 type: 'csv',
                 encoding: 'EUCKR'
             }
         };
 
-        encoding.utf8(source, './test/tmp/', function(){
+        encoding.utf8(source, './test/tmp/', function(){            
             var md5a = md5(fs.readFileSync('./test/tmp/euckr-sample.csv'));
             var md5b = md5(fs.readFileSync('./test/fixtures/utf8-sample.csv'));
             t.ok( (md5a === md5b), 'Converted EUCKR-encoded file matches UTF-8 reference');

@@ -1,1 +1,7 @@
-{"shapefile":"shp","shapefile-polygon":"shp","geojson":"json","csv":"csv"}
+{
+    "shapefile": "shp",
+    "shapefile-polygon": "shp",
+    "geojson": "json",
+    "csv": "csv",
+    "xml": "xml"
+}

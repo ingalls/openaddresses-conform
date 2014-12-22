@@ -32,6 +32,7 @@
     "geojson-stream": "0.0.0",
     "iconv": "^2.1.4",
     "minimist": "0.0.8",
+    "node-expat": "^2.3.2",
     "progress": "~1.1.4",
     "recursive-readdir": "^1.2.0",
     "request": "~2.34.0",
